@@ -4,15 +4,24 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run backend functions",
+            "label": "Development - Backend",
             "type": "shell",
             "command": "./scripts/run-backend-functions.ps1"
         },
         {
-            "label": "Deploy function",
+            "label": "Development - UI",
             "type": "shell",
-            "command": "gcloud functions deploy ${input:name} --runtime python37 --trigger-http --allow-unauthenticated --memory ${input:memory} --source ${workspaceFolder}\\functions\\${input:name} --region europe-west1 --max-instances ${input:max-instances} --timeout ${input:timeout} --set-env-vars $(Get-Content ./functions/.env.production -ReadCount 100 | ForEach{$_ -Join ','})",
-            "problemMatcher": []
+            "command": "cd ui; npm run serve"
+        },
+        {
+            "label": "Deploy - Backend function",
+            "type": "shell",
+            "command": "gcloud functions deploy ${input:name} --runtime python37 --trigger-http --allow-unauthenticated --memory ${input:memory} --source ${workspaceFolder}\\functions\\${input:name} --region europe-west1 --max-instances ${input:max-instances} --timeout ${input:timeout} --set-env-vars $(Get-Content ./functions/.env.production -ReadCount 100 | ForEach{$_ -Join ','})"
+        },
+        {
+            "label": "Deploy - UI",
+            "type": "shell",
+            "command": "cd ui; npm run deploy",
         }
     ],
     "inputs": [
