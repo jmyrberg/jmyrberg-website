@@ -4,6 +4,9 @@ ext/*
 notebooks/*
 *.env.local
 *.env.production
+.vscode/launch.json
+.vscode/settings.json
+*.code-workspace
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
