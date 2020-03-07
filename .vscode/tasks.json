@@ -1,0 +1,46 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run backend functions",
+            "type": "shell",
+            "command": "./scripts/run-backend-functions.ps1"
+        },
+        {
+            "label": "Deploy function",
+            "type": "shell",
+            "command": "gcloud functions deploy ${input:name} --runtime python37 --trigger-http --allow-unauthenticated --memory ${input:memory} --source ${workspaceFolder}\\functions\\${input:name} --region europe-west1 --max-instances ${input:max-instances} --timeout ${input:timeout} --set-env-vars $(Get-Content ./functions/.env.production -ReadCount 100 | ForEach{$_ -Join ','})",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "name",
+            "description": "Name of the function",
+            "default": ""
+        },
+        {
+            "type": "pickString",
+            "id": "memory",
+            "description": "Memory allocated for the function",
+            "default": "128MB",
+            "options": ["128MB", "256MB", "512MB", "1024MB", "2048MB"]
+        },
+        {
+            "type": "pickString",
+            "id": "timeout",
+            "description": "Timeout for the function",
+            "default": "60",
+            "options": ["10", "60", "120", "180", "240", "540"]
+        },
+        {
+            "type": "promptString",
+            "id": "max-instances",
+            "description": "Maximum number of instances",
+            "default": "1"
+        },
+    ]
+}
