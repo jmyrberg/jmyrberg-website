@@ -5,6 +5,7 @@ import Home from '../views/Home.vue'
 import MaximumFlows from '../views/DemoProjects/MaximumFlows.vue'
 import FoodRecommender from '../views/DemoProjects/FoodRecommender.vue'
 import DocContextSimilarity from '../views/DemoProjects/DocContextSimilarity.vue'
+import Finscraper from '../views/DemoProjects/Finscraper.vue'
 
 Vue.use(VueRouter)
 
@@ -25,6 +26,11 @@ const routes = [
     name: 'food-recommender',
     component: FoodRecommender,
     props: true
+  },
+  {
+    path: '/demo-projects/finscraper',
+    name: 'finscraper',
+    component: Finscraper
   },
   {
     path: '/demo-projects/doc-context-similarity',

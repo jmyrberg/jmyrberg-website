@@ -1,3 +1,5 @@
-https://download.pytorch.org/whl/cpu/torch-1.4.0%2Bcpu-cp37-cp37m-linux_x86_64.whl
-https://download.pytorch.org/whl/cpu/torchvision-0.5.0%2Bcpu-cp37-cp37m-linux_x86_64.whl
+https://download.pytorch.org/whl/cpu/torch-1.4.0%2Bcpu-cp37-cp37m-linux_x86_64.whl; sys_platform != 'darwin'
+https://download.pytorch.org/whl/cpu/torchvision-0.5.0%2Bcpu-cp37-cp37m-linux_x86_64.whl; sys_platform != 'darwin'
+torch==1.4.0; sys_platform == 'darwin'
+torchvision==0.5.0; sys_platform == 'darwin'
 transformers==2.4.1

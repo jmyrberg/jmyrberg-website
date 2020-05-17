@@ -1,0 +1,232 @@
+<template>
+  <DemoProjectTemplate header="Finscraper">
+    <template v-slot:description>
+      <p>
+        This tool demonstrates the use of <b><a href="https://github.com/jmyrberg/finscraper" target="_blank">finscraper</a></b> Python library for fetching content from popular Finnish websites. You may define the number of items to be fetched and download them in Excel or JSON format. The maximum number of items in this demo is limited to 50 - please see the <a href="https://finscraper.readthedocs.io/" target="_blank">library documentation</a> for more extensive usage.
+      </p>
+      <p>
+        The same technology can be used for fetching any kind of content on the web. Typical use cases include automated lead generation, product price comparison, brand sentiment monitoring, or data collection for machine learning.
+      </p>
+    </template>
+    <template v-slot:content>
+      <v-container fluid class="mt-0 pt-0">
+        <v-row>
+          <v-col
+            class="my-0 py-0"
+            cols="12"
+            xs="12"
+            sm="6"
+            md="4"
+          >
+            <v-select
+              v-model="spider"
+              :items="spiderOptions"
+              label="Spider"
+              placeholder="Select spider to use"
+            >
+            </v-select>
+          </v-col>
+          <v-col
+            class="my-0 py-0"
+            cols="12"
+            xs="12"
+            sm="6"
+            md="4"
+          >
+            <v-slider
+              v-on="on"
+              class="pt-4"
+              v-model="nItems"
+              label="# items"
+              hint="Number of items to fetch"
+              min="1"
+              max="50"
+              thumb-label="always"
+            >
+            </v-slider>
+          </v-col>
+          <v-col
+            class="my-0 pt-2 pb-0"
+            cols="12"
+            xs="12"
+            sm="6"
+            md="4"
+          >
+            <v-tooltip top>
+              <template v-slot:activator="{ on }">
+                <v-btn
+                  v-on="on"
+                  outlined
+                  @click="scrape"
+                  :loading="loading"
+                >
+                  <v-icon left>mdi-spider</v-icon>
+                  Scrape
+                </v-btn>
+              </template>
+              <span>Start spider to fetch {{ nItems }} items</span>
+            </v-tooltip>
+            <v-menu
+              v-model="showDownloadMenu"
+              v-if="results.length > 0"
+              bottom
+              offset-y
+              transition="slide-y-transition"
+            >
+              <template v-slot:activator="{ on }">
+                <v-btn
+                  v-on="on"
+                  text
+                >
+                  Download
+                  <v-icon right>{{ showDownloadMenu ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+                </v-btn>
+              </template>
+              <v-list>
+                <v-list-item @click="downloadExcel">
+                  <v-list-item-title><v-icon left color="green darken-2">mdi-file-excel-box</v-icon>Excel</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="downloadJSON">
+                  <v-list-item-title><v-icon left color="yellow darken-3">mdi-code-json</v-icon>JSON</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </v-col>
+        </v-row>
+        <v-row
+          class="pt-4 mt-2"
+        >
+          <v-expansion-panels
+            focusable
+          >
+            <v-expansion-panel
+              v-for="(item, idx) in results"
+              :key="idx"
+            >
+              <v-expansion-panel-header>{{ idx + 1 }}: {{ 'title' in item ? item.title : item.url }}</v-expansion-panel-header>
+              <v-expansion-panel-content>
+                <v-list-item
+                  v-for="(key, idx) in Object.keys(item)"
+                  :key="idx"
+                >
+                  <v-list-item-content><span class="title">{{ key }}</span> {{ item[key] }}</v-list-item-content>
+                </v-list-item>
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </v-row>
+      </v-container>
+    </template>
+  </DemoProjectTemplate>
+</template>
+
+<script>
+import { saveAs } from 'file-saver'
+import { mapActions } from 'vuex'
+import DemoProjectTemplate from '@/components/DemoProjects/DemoProjectTemplate'
+export default {
+  name: 'Finscraper',
+  components: {
+    DemoProjectTemplate
+  },
+  data: () => ({
+    spider: null,
+    spiderOptions: [],
+    nItems: 10,
+    timeout: 60,
+    loading: false,
+    results: [],
+    excel: null,
+    showDownloadMenu: false
+  }),
+  watch: {
+  },
+  computed: {
+  },
+  methods: {
+    scrape () {
+      this.loading = true
+      return this.$api.post('/finscraper', {
+        data: {
+          spider: this.spider,
+          nItems: this.nItems,
+          timeout: this.timeout
+        }
+      }).then(resp => {
+        this.results = resp.data.data.items
+        this.excel = resp.data.data.excel
+        this.loading = false
+      }).catch(err => {
+        console.log(err)
+        this.loading = false
+        this.showMessage({
+          message: err.response && err.response.data ? err.response.data.message : 'Something went wrong, please try again later :(',
+          color: 'error',
+          delay: -1
+        })
+      })
+    },
+    getSpiders () {
+      this.$api.get('/finscraper').then(resp => {
+        this.spiderOptions = resp.data.data
+        if (this.spider === null && this.spiderOptions.length > 0) {
+          this.spider = this.spiderOptions[0].value
+        }
+      }).catch(err => {
+        console.log(err)
+        this.showMessage({
+          message: err.response && err.response.data ? err.response.data.message : 'Something went wrong, please try again later :(',
+          color: 'error',
+          delay: -1
+        })
+      })
+    },
+    b64toBlob (b64Data, contentType, sliceSize = 15) {
+      const byteCharacters = atob(b64Data)
+      const byteArrays = []
+
+      for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize)
+
+        const byteNumbers = new Array(slice.length)
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i)
+        }
+
+        const byteArray = new Uint8Array(byteNumbers)
+        byteArrays.push(byteArray)
+      }
+
+      const blob = new Blob(byteArrays, { type: contentType })
+      return blob
+    },
+    downloadExcel () {
+      const blob = this.b64toBlob(this.excel, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8')
+      saveAs(blob, 'data.xlsx')
+    },
+    downloadJSON () {
+      const blob = new Blob([JSON.stringify(this.results)], { type: 'data:text/json;charset=utf-8' })
+      saveAs(blob, 'data.json')
+    },
+    ...mapActions(['showMessage'])
+  },
+  mounted () {
+    this.getSpiders()
+  }
+}
+</script>
+
+<style scoped>
+>>>.v-data-footer {
+  flex-wrap: nowrap;
+}
+>>>.v-data-footer__select {
+  margin-left: 8px;
+}
+>>>.v-data-footer__select .v-select {
+  margin: 13px 0 13px 13px;
+}
+>>>.v-data-footer__pagination {
+  margin: 13px 0 13px 13px;
+}
+</style>

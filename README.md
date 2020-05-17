@@ -30,6 +30,12 @@ The website and this repository contains several demo projects, which are briefl
 
 * Main logic written in Vue.js, object storage is used for saved lists
 
+### Finscraper
+
+* Tool that fetches content from popular Finnish websites with spiders, and allows user to download scraped items into Excel or JSON
+
+* Provides a serverless spider through [finscraper](https://github.com/jmyrberg/finscraper) - a library that I have developed
+
 ### Maximum Flows
 
 * Tool that optimizes the flows of a network which the user can create in the web browser

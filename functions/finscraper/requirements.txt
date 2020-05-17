@@ -1,0 +1,2 @@
+finscraper
+openpyxl==3.0.3

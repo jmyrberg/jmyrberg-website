@@ -89,6 +89,14 @@ export default {
           src: require('@/assets/food-recommender.jpg')
         },
         {
+          title: 'Finscraper',
+          subtitle: 'Web Scraping',
+          text: 'Fetch content from Finnish websites in a structured format with finscraper library. Scrape the latest content through the user interface and download the results into Excel or JSON.',
+          labels: ['Web', 'Scraping', 'Automation', 'Finnish', 'NLP'],
+          to: 'finscraper',
+          src: require('@/assets/finscraper.jpg')
+        },
+        {
           title: 'Maximum Flows',
           subtitle: 'Optimization',
           text: 'Demonstration of what optimization can be used for. This tool lets you create a network, and then find the path through the network which maximizes the flow from the source to destination node.',
