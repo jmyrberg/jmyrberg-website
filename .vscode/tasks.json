@@ -4,14 +4,19 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Development - Backend",
+            "label": "Development - Backend (Windows)",
             "type": "shell",
             "command": "./scripts/run-backend-functions.ps1"
         },
         {
+            "label": "Development - Backend (Darwin)",
+            "type": "shell",
+            "command": "source ./scripts/run-backend-functions.sh"
+        },
+        {
             "label": "Development - UI",
             "type": "shell",
-            "command": "cd ui; npm run serve"
+            "command": "cd ui && npm run serve"
         },
         {
             "label": "Deploy - Backend function",
@@ -21,7 +26,7 @@
         {
             "label": "Deploy - UI",
             "type": "shell",
-            "command": "cd ui; npm run deploy",
+            "command": "cd ui && npm run deploy",
         }
     ],
     "inputs": [
