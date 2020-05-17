@@ -12,7 +12,7 @@
             x-large
             :elevation="hover ? 4 : 0"
           >
-            <v-icon>mdi-github-circle</v-icon>
+            <v-icon>mdi-github</v-icon>
           </v-btn>
         </v-hover>
         <v-hover
