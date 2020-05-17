@@ -156,6 +156,13 @@ export default {
         this.results = resp.data.data.items
         this.excel = resp.data.data.excel
         this.loading = false
+        if (this.results && this.results.length === 0) {
+          this.showMessage({
+            message: 'Scraping seems to be prohibited from the cloud for this content. Please try changing the spider.',
+            color: 'warning',
+            delay: -1
+          })
+        }
       }).catch(err => {
         console.log(err)
         this.loading = false

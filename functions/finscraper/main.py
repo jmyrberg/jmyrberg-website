@@ -1,4 +1,4 @@
-"""Module for Next Sentence Prediction."""
+"""Module for finscraper demonstration."""
 
 
 import base64
@@ -14,6 +14,11 @@ from finscraper.spiders import ISArticle, ILArticle, YLEArticle, VauvaPage
 
 SPIDERS = [
     {
+        'text': 'YLE news articles',
+        'value': 'ylearticle',
+        'class': YLEArticle
+    },
+    {
         'text': 'Iltasanomat news articles',
         'value': 'isarticle',
         'class': ISArticle
@@ -22,11 +27,6 @@ SPIDERS = [
         'text': 'Iltalehti news articles',
         'value': 'ilarticle',
         'class': ILArticle
-    },
-    {
-        'text': 'YLE news articles',
-        'value': 'ylearticle',
-        'class': YLEArticle
     },
     {
         'text': 'Vauva.fi discussion threads',

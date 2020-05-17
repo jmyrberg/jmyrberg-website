@@ -19,14 +19,24 @@
             "command": "cd ui && npm run serve"
         },
         {
-            "label": "Deploy - Backend function",
+            "label": "Deploy - Backend function (Windows)",
             "type": "shell",
             "command": "gcloud functions deploy ${input:name} --runtime python37 --trigger-http --allow-unauthenticated --memory ${input:memory} --source ${workspaceFolder}\\functions\\${input:name} --region europe-west1 --max-instances ${input:max-instances} --timeout ${input:timeout} --set-env-vars $(Get-Content ./functions/.env.production -ReadCount 100 | ForEach{$_ -Join ','})"
         },
         {
-            "label": "Deploy - UI",
+            "label": "Deploy - Backend function (Darwin)",
             "type": "shell",
-            "command": "cd ui && npm run deploy",
+            "command": "source ~/.zshrc && gcloud functions deploy ${input:name} --runtime python37 --trigger-http --allow-unauthenticated --memory ${input:memory} --source ${workspaceFolder}/functions/${input:name} --region europe-west1 --max-instances ${input:max-instances} --timeout ${input:timeout} --set-env-vars \"$(paste -d, -s ./functions/.env.production)\""
+        },
+        {
+            "label": "Deploy - UI (Windows)",
+            "type": "shell",
+            "command": "cd ui; npm run deploy",
+        },
+        {
+            "label": "Deploy - UI (Darwin)",
+            "type": "shell",
+            "command": "source ~/.zshrc && cd ui && npm run deploy",
         }
     ],
     "inputs": [
