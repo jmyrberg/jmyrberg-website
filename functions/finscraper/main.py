@@ -9,7 +9,8 @@ import os
 from flask import jsonify
 from itsdangerous import Signer
 
-from finscraper.spiders import ISArticle, ILArticle, YLEArticle, VauvaPage
+from finscraper.spiders import ISArticle, ILArticle, YLEArticle, VauvaPage, \
+    OikotieApartment
 
 
 SPIDERS = [
@@ -32,6 +33,11 @@ SPIDERS = [
         'text': 'Vauva.fi discussion threads',
         'value': 'vauvapage',
         'class': VauvaPage
+    },
+    {
+        'text': 'Oikotie.fi apartments',
+        'value': 'oikotieapartment',
+        'class': OikotieApartment
     }
 ]
 
@@ -103,7 +109,7 @@ def finscraper(request):
         print(f'Parameters:\n{data}')
         spider_cls = [s['class'] for s in SPIDERS
                       if s['value'] == data['spider']][0]
-        spider = (spider_cls(progress_bar=False)
+        spider = (spider_cls(progress_bar=False, log_level='info')
                   .scrape(data['nItems'], timeout=data['timeout']))
         items = spider.get('list')
         print('Converting Excel...')

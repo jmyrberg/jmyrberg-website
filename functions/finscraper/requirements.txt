@@ -1,2 +1,2 @@
-finscraper
+finscraper==0.0.1.dev18
 openpyxl==3.0.3
