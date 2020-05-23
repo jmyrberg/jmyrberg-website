@@ -103,7 +103,7 @@
               v-for="(item, idx) in results"
               :key="idx"
             >
-              <v-expansion-panel-header>{{ idx + 1 }}: {{ 'title' in item ? item.title : item.url }}</v-expansion-panel-header>
+              <v-expansion-panel-header>{{ idx + 1 }}: {{ 'title' in item ? item.title : ('name' in item ? item.name : item.url) }}</v-expansion-panel-header>
               <v-expansion-panel-content>
                 <v-list-item
                   v-for="(key, idx) in Object.keys(item)"
