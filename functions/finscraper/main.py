@@ -10,7 +10,7 @@ from flask import jsonify
 from itsdangerous import Signer
 
 from finscraper.spiders import ISArticle, ILArticle, YLEArticle, VauvaPage, \
-    OikotieApartment
+    Suomi24Page, ToriDeal
 
 
 SPIDERS = [
@@ -35,9 +35,14 @@ SPIDERS = [
         'class': VauvaPage
     },
     {
-        'text': 'Oikotie.fi apartments',
-        'value': 'oikotieapartment',
-        'class': OikotieApartment
+        'text': 'Suomi24 discussion threads',
+        'value': 'suomi24page',
+        'class': Suomi24Page
+    },
+    {
+        'text': 'Tori deals',
+        'value': 'torideal',
+        'class': ToriDeal
     }
 ]
 
