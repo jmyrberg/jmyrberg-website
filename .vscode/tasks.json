@@ -16,7 +16,7 @@
         {
             "label": "Development - UI",
             "type": "shell",
-            "command": "cd ui && npm run serve"
+            "command": "source ~/.zshrc && cd ui && npm run serve"
         },
         {
             "label": "Deploy - Backend function (Windows)",

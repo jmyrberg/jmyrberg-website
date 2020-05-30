@@ -22,7 +22,8 @@
               v-model="spider"
               :items="spiderOptions"
               label="Spider"
-              placeholder="Select spider to use"
+              :loading="initLoading"
+              :placeholder="initLoading ? 'Loading spiders, please wait...' : 'Select spider to use'"
             >
             </v-select>
           </v-col>
@@ -34,9 +35,9 @@
             md="4"
           >
             <v-slider
-              v-on="on"
               class="pt-4"
               v-model="nItems"
+              :disabled="initLoading"
               label="# items"
               hint="Number of items to fetch"
               min="1"
@@ -56,6 +57,7 @@
               <template v-slot:activator="{ on }">
                 <v-btn
                   v-on="on"
+                  :disabled="initLoading"
                   outlined
                   @click="scrape"
                   :loading="loading"
@@ -64,7 +66,7 @@
                   Scrape
                 </v-btn>
               </template>
-              <span>Start spider to fetch {{ nItems }} items</span>
+              <span>Fetch at least {{ nItems }} items</span>
             </v-tooltip>
             <v-menu
               v-model="showDownloadMenu"
@@ -135,6 +137,7 @@ export default {
     nItems: 10,
     timeout: 60,
     loading: false,
+    initLoading: false,
     results: [],
     excel: null,
     showDownloadMenu: false
@@ -174,11 +177,13 @@ export default {
       })
     },
     getSpiders () {
+      this.initLoading = true
       this.$api.get('/finscraper').then(resp => {
         this.spiderOptions = resp.data.data
         if (this.spider === null && this.spiderOptions.length > 0) {
           this.spider = this.spiderOptions[0].value
         }
+        this.initLoading = false
       }).catch(err => {
         console.log(err)
         this.showMessage({
@@ -186,6 +191,7 @@ export default {
           color: 'error',
           delay: -1
         })
+        this.initLoading = false
       })
     },
     b64toBlob (b64Data, contentType, sliceSize = 15) {
@@ -224,16 +230,4 @@ export default {
 </script>
 
 <style scoped>
->>>.v-data-footer {
-  flex-wrap: nowrap;
-}
->>>.v-data-footer__select {
-  margin-left: 8px;
-}
->>>.v-data-footer__select .v-select {
-  margin: 13px 0 13px 13px;
-}
->>>.v-data-footer__pagination {
-  margin: 13px 0 13px 13px;
-}
 </style>

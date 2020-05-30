@@ -19,6 +19,15 @@
             mdi-chevron-up
           </v-icon>
         </div>
+        <span
+          class="overline align-center"
+          :style="{
+            'position': 'absolute',
+            'margin-top': showDescription ? '10px' : '-10px'
+          }"
+        >
+          <a @click="showDescription = !showDescription">{{ showDescription ? 'Close' : '' }}</a>
+        </span>
       </v-row>
     </v-col>
     <v-expand-transition duration="800">

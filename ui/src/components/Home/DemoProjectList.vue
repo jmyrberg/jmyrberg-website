@@ -92,7 +92,7 @@ export default {
           title: 'Finscraper',
           subtitle: 'Web Scraping',
           text: 'Fetch content from Finnish websites in a structured format with finscraper library. Scrape the latest content through the user interface and download the results into Excel or JSON.',
-          labels: ['Web', 'Scraping', 'Automation', 'Finnish', 'NLP'],
+          labels: ['Web', 'Scraping', 'Finnish'],
           to: 'finscraper',
           src: require('@/assets/finscraper.jpg')
         },

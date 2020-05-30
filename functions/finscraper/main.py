@@ -20,7 +20,7 @@ SPIDERS = [
         'class': YLEArticle
     },
     {
-        'text': 'Iltasanomat news articles',
+        'text': 'Ilta-Sanomat news articles',
         'value': 'isarticle',
         'class': ISArticle
     },
