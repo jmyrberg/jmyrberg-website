@@ -82,7 +82,7 @@ class Nibe:
                    if btn.attrs.get('id').isnumeric()]
         return metrics
 
-    def get_metric_history(self, metric, start, end, resolution=1):
+    def get_metric_history(self, metric, start, end, resolution=1000):
         data = {
             'hpid': self.hpid,
             'variableId': metric,
