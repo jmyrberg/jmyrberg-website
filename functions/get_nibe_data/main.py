@@ -107,7 +107,8 @@ class Nibe:
         for metric in metrics:
             metric_dict = self.get_metric_history(metric, start, end)
             for timestamp, value in metric_dict['data']:
-                if (timestamp >= start) and (timestamp  <= end):
+                timestamp = int(timestamp // 1000)
+                if (timestamp >= start) and (timestamp <= end):
                     data.append({
                         'metric': metric,
                         'timestamp': timestamp,
