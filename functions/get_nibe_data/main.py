@@ -155,7 +155,6 @@ class Nibe:
                     'unit': unit
                 })
             except Exception as e:
-                print(f'Parsing failed due to:\n{str(e)}')
                 pass
 
         if len(data) > 0:        
