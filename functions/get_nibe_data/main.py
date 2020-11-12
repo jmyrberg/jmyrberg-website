@@ -139,20 +139,12 @@ class Nibe:
             try:
                 metric = tr.find('span', {'class': lambda x: 'ID' in x}).attrs['class'][1][2:]
                 label = re.sub(r'\s+', ' ', tr.find('td').text).strip()
-                value_text = tr.find('span', {'class': lambda x: 'AutoUpdate' in x}).text
-                if any(c.isnumeric() for c in value_text):
-                    value = re.sub(r'[^0-9\.]', '', value_text)
-                    value = float(value) if len(value) else None
-                    unit = re.sub(r'[0-9\.]', '', value_text)
-                else:
-                    value = value_text
-                    unit = ''
+                value = tr.find('span', {'class': lambda x: 'AutoUpdate' in x}).text
                 data.append({
                     'metric': metric,
                     'timestamp': timestamp,
                     'value': value,
-                    'label': label,
-                    'unit': unit
+                    'label': label
                 })
             except Exception as e:
                 pass
