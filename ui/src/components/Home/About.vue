@@ -31,7 +31,7 @@
       <v-col cols="12" xs="12" sm="6">
         <v-row class="ma-0 pa-0" :justify="$vuetify.breakpoint.smAndUp ? 'left' : 'center'" align="center">
           <p class="my-2" v-bind:class="{ 'text-center': !$vuetify.breakpoint.smAndUp }">
-            I am a business problem solver with more than 5 years of experience in building advanced analytics solutions for various domains. My key competences include <strong>mathematical optimization</strong> and <strong>machine learning</strong>, but I am eager to take challenges all the way from backend APIs to end-user interfaces and trainings.
+            I am a business problem solver with more than {{ new Date().getFullYear() - 2015 }} years of experience in building advanced analytics solutions for various domains. My key competences include <strong>mathematical optimization</strong> and <strong>machine learning</strong>, but I am eager to take challenges all the way from backend APIs to end-user interfaces and trainings.
           </p>
         </v-row>
         <v-row :justify="$vuetify.breakpoint.smAndUp ? 'left' : 'center'" align="center">

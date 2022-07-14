@@ -88,7 +88,10 @@
         :value="selected"
         sort-by="score"
         :sort-desc="true"
-        :items-per-page="10"
+        :items-per-page="100"
+        :footer-props="{
+          'items-per-page-options': [10, 20, 50, 100, -1]
+        }"
         calculate-widths
         :loading="loadingData"
       >
@@ -501,16 +504,16 @@ export default {
 </script>
 
 <style scoped>
->>>.v-data-footer {
+:deep(.v-data-footer) {
   flex-wrap: nowrap;
 }
->>>.v-data-footer__select {
+:deep(.v-data-footer__select) {
   margin-left: 8px;
 }
->>>.v-data-footer__select .v-select {
+:deep(.v-data-footer__select .v-select) {
   margin: 13px 0 13px 13px;
 }
->>>.v-data-footer__pagination {
+:deep(.v-data-footer__pagination) {
   margin: 13px 0 13px 13px;
 }
 </style>

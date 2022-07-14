@@ -32,7 +32,7 @@
     </v-row>
     <v-row align="center" justify="center" class="mt-3 mb-3">
       <div class="font-weight-light">
-        &copy; 2020 Jesse Myrberg
+        &copy; {{ new Date().getFullYear() }} Jesse Myrberg
       </div>
     </v-row>
   </v-container>
