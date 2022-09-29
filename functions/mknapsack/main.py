@@ -1,51 +1,19 @@
-"""Module for finscraper demonstration."""
+"""Module for Next Sentence Prediction."""
 
 
-import base64
 import functools
-import io
 import os
 
 from flask import jsonify
 from itsdangerous import Signer
 
-from finscraper.spiders import ISArticle, ILArticle, VauvaPage, Suomi24Page, \
-    ToriDeal
+import torch
+import transformers
 
 
-SPIDERS = [
-    # TODO: Not working fully with finscraper==0.2.1
-    # {
-    #     'text': 'YLE news articles',
-    #     'value': 'ylearticle',
-    #     'class': YLEArticle
-    # },
-    {
-        'text': 'Ilta-Sanomat news articles',
-        'value': 'isarticle',
-        'class': ISArticle
-    },
-    {
-        'text': 'Iltalehti news articles',
-        'value': 'ilarticle',
-        'class': ILArticle
-    },
-    {
-        'text': 'Vauva.fi discussion threads',
-        'value': 'vauvapage',
-        'class': VauvaPage
-    },
-    {
-        'text': 'Suomi24 discussion threads',
-        'value': 'suomi24page',
-        'class': Suomi24Page
-    },
-    {
-        'text': 'Tori deals',
-        'value': 'torideal',
-        'class': ToriDeal
-    }
-]
+model = None
+
+tokenizer = None
 
 
 def request_wrapper(original_func=None,
@@ -100,30 +68,51 @@ def request_wrapper(original_func=None,
     return _decorate
 
 
-@request_wrapper(allowed_methods=['OPTIONS', 'POST', 'GET'])
-def finscraper(request):
-    """Scrape content from popular Finnish websites with finscraper."""
-    if request.method == 'GET':
-        print('Returning spider metadata...')
-        return {'status': 'success',
-                'message': 'Spider metadata obtained successfully!',
-                'data': [{'text': s['text'], 'value': s['value']}
-                         for s in SPIDERS]}, 200
-    elif request.method == 'POST':
-        print('Fetching content with finscraper...')
-        data = request.get_json()['data']
-        print(f'Parameters:\n{data}')
-        spider_cls = [s['class'] for s in SPIDERS
-                      if s['value'] == data['spider']][0]
-        spider = (spider_cls(progress_bar=False, log_level='info')
-                  .scrape(data['nItems'], timeout=data['timeout']))
-        items = spider.get('list')
-        print('Converting Excel...')
-        buffer = io.BytesIO()
-        spider.get().to_excel(buffer, index=False)
-        buffer.seek(0)
-        excel_b64 = base64.b64encode(buffer.read()).decode('utf-8')
-        print('Results ready!')
-        return {'status': 'success',
-                'message': 'Scraped items obtained successfully!',
-                'data': {'items': items, 'excel': excel_b64}}, 200
+@request_wrapper(allowed_methods=['OPTIONS', 'POST'])
+def doc_context_similarity(request):
+    """Predict probability of two documents appearing in the same context."""
+    print('Starting document context similarity prediction...')
+    global model, tokenizer
+    if not tokenizer:
+        print('Loading tokenizer...')
+        if os.getenv('ENV', '') == 'local':
+            # TODO: Think about whether to keep the cased or uncased?
+            tokenizer = transformers.BertTokenizer(
+                './ext/model/vocab.txt', do_lower_case=False)
+        else:
+            tokenizer = (transformers.BertTokenizer
+                         .from_pretrained('bert-base-finnish-cased-v1'))
+        print('Tokenizer loaded!')
+    if not model:
+        print('Loading model...')
+        model_path = ('./ext/model' if os.getenv('ENV', '') == 'local'
+                      else 'bert-base-finnish-cased-v1')
+        model = (transformers.BertForNextSentencePrediction
+                 .from_pretrained(model_path))
+        model.eval()
+        print('Model loaded!')
+
+    print('Predicting...')
+    data = request.get_json()['data']
+
+    # Parse data
+    doc1 = data['doc1']
+    doc2 = data['doc2']
+
+    # Inference
+    tokens1 = ['[CLS]'] + tokenizer.tokenize(doc1) + ['[SEP]']
+    tokens2 = tokenizer.tokenize(doc2) + ['[SEP]']
+    tokens = tokens1 + tokens2
+
+    indexed_tokens = tokenizer.convert_tokens_to_ids(tokens)
+    segments_ids = [0] * len(tokens1) + [1] * len(tokens2)
+
+    tokens_tensor = torch.tensor([indexed_tokens])
+    segments_tensors = torch.tensor([segments_ids])
+
+    pred = model(tokens_tensor, token_type_ids=segments_tensors)[0]
+    probability = float(torch.nn.Softmax(dim=1)(pred).data.numpy()[0][0])
+    print('Prediction done!')
+    return {'status': 'success',
+            'message': 'Prediction obtained successfully!',
+            'data': {'probability': probability}}, 200

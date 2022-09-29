@@ -73,6 +73,9 @@ def doc_context_similarity(request):
     """Predict probability of two documents appearing in the same context."""
     print('Starting document context similarity prediction...')
     global model, tokenizer
+
+    # If ENV == 'local', assume model downloaded under ./ext/model from
+    # https://huggingface.co/TurkuNLP/bert-base-finnish-cased-v1/tree/main
     if not tokenizer:
         print('Loading tokenizer...')
         if os.getenv('ENV', '') == 'local':
@@ -80,13 +83,14 @@ def doc_context_similarity(request):
             tokenizer = transformers.BertTokenizer(
                 './ext/model/vocab.txt', do_lower_case=False)
         else:
-            tokenizer = (transformers.BertTokenizer
-                         .from_pretrained('bert-base-finnish-cased-v1'))
+            tokenizer = (transformers.BertTokenizer.from_pretrained(
+                'TurkuNLP/bert-base-finnish-cased-v1'))
         print('Tokenizer loaded!')
+
     if not model:
         print('Loading model...')
         model_path = ('./ext/model' if os.getenv('ENV', '') == 'local'
-                      else 'bert-base-finnish-cased-v1')
+                      else 'TurkuNLP/bert-base-finnish-cased-v1')
         model = (transformers.BertForNextSentencePrediction
                  .from_pretrained(model_path))
         model.eval()
@@ -98,6 +102,9 @@ def doc_context_similarity(request):
     # Parse data
     doc1 = data['doc1']
     doc2 = data['doc2']
+
+    print(f'Document 1:\n{str(doc1)}')
+    print(f'Document 2:\n{str(doc2)}')
 
     # Inference
     tokens1 = ['[CLS]'] + tokenizer.tokenize(doc1) + ['[SEP]']
@@ -112,6 +119,8 @@ def doc_context_similarity(request):
 
     pred = model(tokens_tensor, token_type_ids=segments_tensors)[0]
     probability = float(torch.nn.Softmax(dim=1)(pred).data.numpy()[0][0])
+    print(f'Probability: {probability}')
+
     print('Prediction done!')
     return {'status': 'success',
             'message': 'Prediction obtained successfully!',
