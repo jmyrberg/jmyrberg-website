@@ -1,2 +1,2 @@
-gsutil==4.47
-functions-framework==1.2.0
+gsutil==5.14
+functions-framework==3.2.0

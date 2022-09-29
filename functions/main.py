@@ -9,7 +9,6 @@ from pathlib import Path
 
 # TODO: Add "Access-Control-Origin" properly to all basic functions
 # TODO: Add generic way to use request decorator - maybe at deployment stage?
-# TODO: Add package versions to all requirements files
 
 
 def index(request):
@@ -25,4 +24,5 @@ def index(request):
     except Exception as e:
         print('Something went wrong within the index, not the function!')
         raise e
+
     return func(request)

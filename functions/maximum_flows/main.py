@@ -7,7 +7,7 @@ import os
 from flask import jsonify
 from itsdangerous import Signer
 
-from ortools.graph import pywrapgraph
+from ortools.graph.python.max_flow import SimpleMaxFlow
 
 
 def request_wrapper(original_func=None,
@@ -91,10 +91,9 @@ def maximum_flows(request):
     sink_node = node_map[sink_node]
 
     # Optimize
-    max_flow = pywrapgraph.SimpleMaxFlow()
-    for i in range(len(start_nodes)):
-        max_flow.AddArcWithCapacity(start_nodes[i], end_nodes[i], capacities[i])
-    solved = max_flow.Solve(source_node, sink_node)
+    max_flow = SimpleMaxFlow()
+    max_flow.add_arcs_with_capacity(start_nodes, end_nodes, capacities)
+    solved = max_flow.solve(source_node, sink_node)
 
     # Results
     status = 'success'
@@ -103,18 +102,18 @@ def maximum_flows(request):
     if solved == max_flow.OPTIMAL:
         message = 'Optimal solution found successfully!'
         data = {}
-        data['optimalFlow'] = max_flow.OptimalFlow()
+        data['optimalFlow'] = max_flow.optimal_flow()
         data['sourceMinCut'] = [node_inv_map[i]
-                                for i in max_flow.GetSourceSideMinCut()]
+                                for i in max_flow.get_source_side_min_cut()]
         data['sinkMinCut'] = [node_inv_map[i]
-                              for i in max_flow.GetSinkSideMinCut()]
+                              for i in max_flow.get_sink_side_min_cut()]
         data['arcs'] = []
-        for i in range(max_flow.NumArcs()):
+        for i in range(max_flow.num_arcs()):
             data['arcs'].append({
-                'startNodeId': node_inv_map[max_flow.Tail(i)],
-                'endNodeId': node_inv_map[max_flow.Head(i)],
-                'flow': max_flow.Flow(i),
-                'capacity': max_flow.Capacity(i)
+                'startNodeId': node_inv_map[max_flow.tail(i)],
+                'endNodeId': node_inv_map[max_flow.head(i)],
+                'flow': max_flow.flow(i),
+                'capacity': max_flow.capacity(i)
             })
     else:
         message = 'No solution found'
