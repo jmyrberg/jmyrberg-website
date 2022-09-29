@@ -22,13 +22,16 @@
       inset
     >
       <div class="text-center">{{ getMessage }}</div>
-      <v-btn
-        color="white"
-        text
-        @click="snackbar = false"
-      >
-        Close
-      </v-btn>
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          v-bind="attrs"
+          color="white"
+          text
+          @click="snackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
     </v-snackbar>
   </v-app>
 </template>

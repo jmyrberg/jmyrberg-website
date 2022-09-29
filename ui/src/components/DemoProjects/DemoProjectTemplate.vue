@@ -1,44 +1,34 @@
 <template>
   <v-row align="center" justify="center">
-    <v-col cols="12">
-      <div class="mb-2 text-center align-center">
+    <v-col cols="12" class="pt-2 mt-2 mb-0 pb-0">
+      <div class="text-center align-center">
         <span class="headline text-uppercase font-weight-light">
           {{ header }}
         </span>
       </div>
-      <v-row align="center" justify="center" class="my-3 pb-1">
-        <v-divider style="border-width: 2px; border-color: black; max-width: 30px;"></v-divider>
-        <div style="position: absolute;">
-          <v-icon
-            color="black"
-            size="36"
-            :class="`${showDescription ? 'mb-2' : 'mt-2'}`"
-            :style="`${showDescription ? 'transform: rotate(0deg);' : 'transform: rotate(180deg);'}`"
-            @click="showDescription = !showDescription"
-          >
-            mdi-chevron-up
-          </v-icon>
-        </div>
-        <span
-          class="overline align-center"
+      <v-row align="center" justify="center" class="my-0 py-0">
+        <v-btn
+          icon
+          color="black"
+          small
           :style="{
-            'position': 'absolute',
-            'margin-top': showDescription ? '10px' : '-10px'
+            'transform': showDescription ? 'rotate(0deg)' : 'rotate(180deg)',
+            'z-index': 10
           }"
+          @click="showDescription = !showDescription"
         >
-          <a @click="showDescription = !showDescription">{{ showDescription ? 'Close' : '' }}</a>
-        </span>
+          <v-icon>mdi-chevron-up</v-icon>
+        </v-btn>
       </v-row>
     </v-col>
     <v-expand-transition duration="800">
       <div v-if="showDescription">
-        <v-col cols="12" class="pt-0 mt-0 mb-0 pb-1">
+        <v-col cols="12" class="my-0 py-0">
           <slot name="description"></slot>
         </v-col>
       </div>
     </v-expand-transition>
-    <v-divider></v-divider>
-    <v-col cols="12">
+    <v-col cols="12" class="mt-0 pt-0">
       <slot name="content"></slot>
     </v-col>
   </v-row>

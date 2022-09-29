@@ -2,7 +2,7 @@
   <DemoProjectTemplate header="Maximum Flows">
     <template v-slot:description>
       <p>
-        <a href="" target="_blank">Optimization</a> aims to minimize or maximize an objective function (like cost or margin) with given constraints (like capacities or time windows).
+        <a href="https://en.wikipedia.org/wiki/Mathematical_optimization" target="_blank">Optimization</a> aims to minimize or maximize an objective function (like cost or margin) with given constraints (like capacities or time windows).
       </p>
       <p class="mb-0">
         Some concrete examples include:
@@ -23,462 +23,465 @@
       </p>
     </template>
     <template v-slot:content>
-      <v-col
-        class="mx-0 px-0 mt-0 pt-0"
-        xs="12"
-        sm="12"
-        md="4"
-        lg="4"
-        xl="4"
+      <v-row
+        class="mt-1 pt-1 mx-0 px-0"
+        cols="12"
       >
-        <v-card>
-          <v-card-title>
-            Information
-          </v-card-title>
-          <v-card-text>
-            Find the flow-maximizing path from the <span style="color: #E57373;"><b>Source</b></span> to the <span style="color: #81C784;"><b>Sink</b></span> node with the given <b>arc</b> capacities.
-            <v-col
-              class="px-0 py-1 mt-3"
-              xs="12"
-              sm="12"
-              md="12"
-              lg="12"
-              xl="12"
-            >
-              <span class="mr-3">{{ $isTouchScreen() ? 'Add node:' : 'Add / remove node:' }}</span>
-              <br>
-              <kbd>{{ $isTouchScreen() ? 'Tap canvas' : 'Double click' }}</kbd>
-            </v-col>
-            <v-col
-              class="px-0 py-1"
-              xs="12"
-              sm="12"
-              md="12"
-              lg="12"
-              xl="12"
-            >
-              <span class="mr-3">New arc:</span>
-              <br>
-              <kbd>{{ $isTouchScreen() ? 'Tap source and target node' : 'Click source and target node' }}</kbd>
-            </v-col>
-            <v-col
-              class="px-0 py-1"
-              xs="12"
-              sm="12"
-              md="12"
-              lg="12"
-              xl="12"
-            >
-              <span class="mr-3">Node / arc settings:</span>
-              <br>
-              <kbd>{{ $isTouchScreen() ? 'Tap' : 'Click' }}</kbd>
-            </v-col>
-            <v-col
-              class="px-0 py-1"
-              xs="12"
-              sm="12"
-              md="12"
-              lg="12"
-              xl="12"
-            >
-              <span class="mr-3">Move graph / node:</span>
-              <br>
-              <kbd>Drag canvas / node</kbd>
-            </v-col>
-            <v-row class="my-0 py-0">
-            <v-col
-              class="my-4 py-3 pb-0 mb-0"
-              xs="12"
-              sm="12"
-              md="12"
-              lg="12"
-              xl="12"
-            >
-              <v-menu
-                v-model="networkMenu"
-                open-on-click
-                bottom
-                offset-x
-                transition="slide-y-transition"
+        <v-col
+          xs="12"
+          sm="12"
+          md="4"
+          lg="4"
+          xl="4"
+        >
+          <v-card>
+            <v-card-title>
+              Information
+            </v-card-title>
+            <v-card-text>
+              Find the flow-maximizing path from the <span style="color: #E57373;"><b>Source</b></span> to the <span style="color: #81C784;"><b>Sink</b></span> node with the given <b>arc</b> capacities.
+              <v-col
+                class="px-0 py-1 mt-3"
+                xs="12"
+                sm="12"
+                md="12"
+                lg="12"
+                xl="12"
               >
+                <span class="mr-3">{{ $isTouchScreen() ? 'Add node:' : 'Add / remove node:' }}</span>
+                <br>
+                <kbd>{{ $isTouchScreen() ? 'Tap canvas' : 'Double click' }}</kbd>
+              </v-col>
+              <v-col
+                class="px-0 py-1"
+                xs="12"
+                sm="12"
+                md="12"
+                lg="12"
+                xl="12"
+              >
+                <span class="mr-3">New arc:</span>
+                <br>
+                <kbd>{{ $isTouchScreen() ? 'Tap source and target node' : 'Click source and target node' }}</kbd>
+              </v-col>
+              <v-col
+                class="px-0 py-1"
+                xs="12"
+                sm="12"
+                md="12"
+                lg="12"
+                xl="12"
+              >
+                <span class="mr-3">Node / arc settings:</span>
+                <br>
+                <kbd>{{ $isTouchScreen() ? 'Tap' : 'Click' }}</kbd>
+              </v-col>
+              <v-col
+                class="px-0 py-1"
+                xs="12"
+                sm="12"
+                md="12"
+                lg="12"
+                xl="12"
+              >
+                <span class="mr-3">Move graph / node:</span>
+                <br>
+                <kbd>Drag canvas / node</kbd>
+              </v-col>
+              <v-row class="my-0 py-0">
+              <v-col
+                class="my-4 py-3 pb-0 mb-0"
+                xs="12"
+                sm="12"
+                md="12"
+                lg="12"
+                xl="12"
+              >
+                <v-menu
+                  v-model="networkMenu"
+                  open-on-click
+                  bottom
+                  offset-x
+                  transition="slide-y-transition"
+                >
+                  <template v-slot:activator="{ on }">
+                    <v-btn
+                      class="mx-0 px-0"
+                      v-on="on"
+                      text
+                    >
+                      Select example
+                      <v-icon right>mdi-chevron-right</v-icon>
+                    </v-btn>
+                  </template>
+                  <v-list>
+                    <v-list-item
+                      v-for="(item, i) in networkItems"
+                      :key="i"
+                      @click="setNetwork(item.value)"
+                    >
+                      <v-list-item-title>{{ item.text }}</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </v-col>
+              </v-row>
+            </v-card-text>
+            <v-card-text
+              v-if="warningMessages.length > 0"
+            >
+              <div
+                v-for="(message,i) in warningMessages"
+                :key=i
+                class="warning--text mt-2"
+              >
+                <v-icon color="warning">mdi-alert-circle</v-icon>
+                {{ message }}
+              </div>
+            </v-card-text>
+            <v-card-actions class="mx-2">
+              <v-btn
+                class="mb-3"
+                outlined
+                :loading="loading"
+                :disabled="!canRunOptimization"
+                @click="runOptimization"
+              >
+                Optimize
+              </v-btn>
+              <v-spacer></v-spacer>
+              <v-btn
+                class="mb-3"
+                text
+                v-if="!(results === null || loading)"
+                @click="toggleResults"
+              >
+                {{ showResults ? 'Hide results' : 'Show results' }}
+                <v-icon>{{ showResults ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+              </v-btn>
+            </v-card-actions>
+            <v-expand-transition>
+              <div v-if="showResults">
+                <v-divider></v-divider>
+                <v-card-text>
+                  <p class="my-0 mt-2">
+                    <span class="subtitle-1 pt-3">Optimal flow:</span>
+                    <br>
+                    <span class="title">{{ results.optimalFlow }}</span>
+                    </p>
+                  <p class="my-0 mt-2">
+                    <span class="subtitle-1 mt-2">Source side minimum cut: </span>
+                    <br>
+                    <v-chip
+                      @mouseover="selectNode(id)"
+                      @mouseleave="unselectNode(id)"
+                      @click="toggleNodeSelection(id)"
+                      small
+                      v-for="id in results.sourceMinCut"
+                      :key="id"
+                    >
+                      {{ nodes.find(x => x.id === id).name }}
+                    </v-chip>
+                  </p>
+                  <p class="my-0 mt-3">
+                    <span class="subtitle-1 mt-2">Sink side minimum cut: </span>
+                    <br>
+                    <v-chip
+                      @mouseover="selectNode(id)"
+                      @mouseleave="unselectNode(id)"
+                      @click="toggleNodeSelection(id)"
+                      small
+                      v-for="id in results.sinkMinCut"
+                      :key="id"
+                    >
+                      {{ nodes.find(x => x.id === id).name }}
+                    </v-chip>
+                  </p>
+                  <v-switch
+                    class="pt-6 mt-0 mb-0 pb-0"
+                    v-model="showResultsZeroFlows"
+                    label="Show zero flows"
+                  >
+                  </v-switch>
+                </v-card-text>
+              </div>
+            </v-expand-transition>
+          </v-card>
+        </v-col>
+        <v-col
+          xs="12"
+          sm="12"
+          md="8"
+          lg="8"
+          xl="8"
+        >
+          <v-card
+          >
+            <v-toolbar
+              :collapse="!selectedObject"
+              top
+              short
+              style="padding-left: 6px; z-index: 1;"
+              elevation="2"
+            >
+              <v-tooltip top>
                 <template v-slot:activator="{ on }">
                   <v-btn
-                    class="mx-0 px-0"
                     v-on="on"
-                    text
+                    small
+                    icon
+                    @click="stageConfig.scale -= 0.1"
                   >
-                    Select example
-                    <v-icon right>mdi-chevron-right</v-icon>
+                    <v-icon>mdi-minus</v-icon>
                   </v-btn>
                 </template>
-                <v-list>
-                  <v-list-item
-                    v-for="(item, i) in networkItems"
-                    :key="i"
-                    @click="setNetwork(item.value)"
-                  >
-                    <v-list-item-title>{{ item.text }}</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
-            </v-col>
-            </v-row>
-          </v-card-text>
-          <v-card-text
-            v-if="warningMessages.length > 0"
-          >
-            <div
-              v-for="(message,i) in warningMessages"
-              :key=i
-              class="warning--text mt-2"
-            >
-              <v-icon color="warning">mdi-alert-circle</v-icon>
-              {{ message }}
-            </div>
-          </v-card-text>
-          <v-card-actions class="mx-2">
-            <v-btn
-              class="mb-3"
-              outlined
-              :loading="loading"
-              :disabled="!canRunOptimization"
-              @click="runOptimization"
-            >
-              Optimize
-            </v-btn>
-            <v-spacer></v-spacer>
-            <v-btn
-              class="mb-3"
-              text
-              v-if="!(results === null || loading)"
-              @click="toggleResults"
-            >
-              {{ showResults ? 'Hide results' : 'Show results' }}
-              <v-icon>{{ showResults ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
-            </v-btn>
-          </v-card-actions>
-          <v-expand-transition>
-            <div v-if="showResults">
-              <v-divider></v-divider>
-              <v-card-text>
-                <p class="my-0 mt-2">
-                  <span class="subtitle-1 pt-3">Optimal flow:</span>
-                  <br>
-                  <span class="title">{{ results.optimalFlow }}</span>
-                  </p>
-                <p class="my-0 mt-2">
-                  <span class="subtitle-1 mt-2">Source side minimum cut: </span>
-                  <br>
-                  <v-chip
-                    @mouseover="selectNode(id)"
-                    @mouseleave="unselectNode(id)"
-                    @click="toggleNodeSelection(id)"
+                <span>Zoom out</span>
+              </v-tooltip>
+              <span style="padding-left: 6px;"></span>
+              <v-tooltip top>
+                <template v-slot:activator="{ on }">
+                  <v-btn
+                    v-on="on"
                     small
-                    v-for="id in results.sourceMinCut"
-                    :key="id"
+                    icon
+                    @click="stageConfig.scale += 0.1"
                   >
-                    {{ nodes.find(x => x.id === id).name }}
-                  </v-chip>
-                </p>
-                <p class="my-0 mt-3">
-                  <span class="subtitle-1 mt-2">Sink side minimum cut: </span>
-                  <br>
-                  <v-chip
-                    @mouseover="selectNode(id)"
-                    @mouseleave="unselectNode(id)"
-                    @click="toggleNodeSelection(id)"
-                    small
-                    v-for="id in results.sinkMinCut"
-                    :key="id"
-                  >
-                    {{ nodes.find(x => x.id === id).name }}
-                  </v-chip>
-                </p>
-                <v-switch
-                  class="pt-6 mt-0 mb-0 pb-0"
-                  v-model="showResultsZeroFlows"
-                  label="Show zero flows"
-                >
-                </v-switch>
-              </v-card-text>
-            </div>
-          </v-expand-transition>
-        </v-card>
-      </v-col>
-      <v-col
-        class="mx-0 px-0"
-        xs="12"
-        sm="12"
-        md="8"
-        lg="8"
-        xl="8"
-      >
-        <v-card
-        >
-          <v-toolbar
-            :collapse="!selectedObject"
-            top
-            short
-            style="padding-left: 6px; z-index: 1;"
-            elevation="2"
-          >
-            <v-tooltip top>
-              <template v-slot:activator="{ on }">
-                <v-btn
-                  v-on="on"
-                  small
-                  icon
-                  @click="stageConfig.scale -= 0.1"
-                >
-                  <v-icon>mdi-minus</v-icon>
-                </v-btn>
-              </template>
-              <span>Zoom out</span>
-            </v-tooltip>
-            <span style="padding-left: 6px;"></span>
-            <v-tooltip top>
-              <template v-slot:activator="{ on }">
-                <v-btn
-                  v-on="on"
-                  small
-                  icon
-                  @click="stageConfig.scale += 0.1"
-                >
-                  <v-icon>mdi-plus</v-icon>
-                </v-btn>
-              </template>
-              <span>Zoom in</span>
-            </v-tooltip>
-            <v-scale-transition
-            >
-              <v-row
-                v-if="selectedObject && selectedObject.objectType === 'node'"
-                class="ml-2 mr-auto pt-2"
+                    <v-icon>mdi-plus</v-icon>
+                  </v-btn>
+                </template>
+                <span>Zoom in</span>
+              </v-tooltip>
+              <v-scale-transition
               >
-                <v-col
-                  cols="5"
+                <v-row
+                  v-if="selectedObject && selectedObject.objectType === 'node'"
+                  class="ml-2 mr-auto pt-2"
                 >
-                  <v-text-field
-                    v-model="selectedObject.name"
-                    label="Name"
-                    placeholder="Name of the node"
-                    hide-details
+                  <v-col
+                    cols="5"
                   >
-                  </v-text-field>
-                </v-col>
-                <v-col
-                  cols="5"
-                >
-                  <v-select
-                    v-model="selectedObject.type"
-                    :items="['Normal', 'Source', 'Sink']"
-                    label="Type"
-                    placeholder="Node type"
-                    hide-details
-                    :disabled="showResults"
+                    <v-text-field
+                      v-model="selectedObject.name"
+                      label="Name"
+                      placeholder="Name of the node"
+                      hide-details
+                    >
+                    </v-text-field>
+                  </v-col>
+                  <v-col
+                    cols="5"
                   >
-                  </v-select>
-                </v-col>
-                <v-col
-                  class="my-0 py-0 mx-0 px-0"
-                  align-self-start
-                  cols="2"
-                >
-                  <v-tooltip top>
-                    <template v-slot:activator="{ on }">
-                      <v-btn
-                        v-on="on"
-                        icon
-                        @click="removeNode(selectedObject.id)"
-                      >
-                        <v-icon>mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
-                    <span>Remove selected node</span>
-                  </v-tooltip>
-                </v-col>
-              </v-row>
-              <v-row
-                v-if="selectedObject && selectedObject.objectType === 'arc'"
-                class="ml-2 mr-auto pt-2"
-              >
-                <v-col
-                  class="mb-2"
-                  cols="10"
-                >
-                  <v-slider
-                    v-model="selectedObject.capacity"
-                    min="0"
-                    max="100"
-                    :label="$vuetify.breakpoint.smAndUp ? 'Maximum capacity' : ''"
-                    :thumb-size="24"
-                    thumb-label="always"
-                    :thumb-color="arcSelectedColor"
-                    track-color="lightgrey"
-                    :track-fill-color="arcSelectedColor"
-                    :disabled="showResults"
-                    hide-details
+                    <v-select
+                      v-model="selectedObject.type"
+                      :items="['Normal', 'Source', 'Sink']"
+                      label="Type"
+                      placeholder="Node type"
+                      hide-details
+                      :disabled="showResults"
+                    >
+                    </v-select>
+                  </v-col>
+                  <v-col
+                    class="my-0 py-0 mx-0 px-0"
+                    align-self-start
+                    cols="2"
                   >
-                  </v-slider>
-                </v-col>
-                <v-col
-                  class="mt-1 py-0 mx-0 px-0"
-                  cols="2"
-                  align-self-start
+                    <v-tooltip top>
+                      <template v-slot:activator="{ on }">
+                        <v-btn
+                          v-on="on"
+                          icon
+                          @click="removeNode(selectedObject.id)"
+                        >
+                          <v-icon>mdi-delete</v-icon>
+                        </v-btn>
+                      </template>
+                      <span>Remove selected node</span>
+                    </v-tooltip>
+                  </v-col>
+                </v-row>
+                <v-row
+                  v-if="selectedObject && selectedObject.objectType === 'arc'"
+                  class="ml-2 mr-auto pt-2"
                 >
-                  <v-tooltip top>
-                    <template v-slot:activator="{ on }">
-                      <v-btn
-                        v-on="on"
-                        icon
-                        @click="removeArc(selectedObject.id)"
-                      >
-                        <v-icon>mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
-                    <span>Remove selected arc</span>
-                  </v-tooltip>
-                </v-col>
-              </v-row>
-            </v-scale-transition>
-          </v-toolbar>
-          <v-container
-            fluid
-            align-start
-            fill-height
-            ref="container"
-            class="ma-0 pa-0"
-            v-resize="resizeStage"
-          >
-            <v-stage
+                  <v-col
+                    class="mb-2"
+                    cols="10"
+                  >
+                    <v-slider
+                      v-model="selectedObject.capacity"
+                      min="0"
+                      max="100"
+                      :label="$vuetify.breakpoint.smAndUp ? 'Maximum capacity' : ''"
+                      :thumb-size="24"
+                      thumb-label="always"
+                      :thumb-color="arcSelectedColor"
+                      track-color="lightgrey"
+                      :track-fill-color="arcSelectedColor"
+                      :disabled="showResults"
+                      hide-details
+                    >
+                    </v-slider>
+                  </v-col>
+                  <v-col
+                    class="mt-1 py-0 mx-0 px-0"
+                    cols="2"
+                    align-self-start
+                  >
+                    <v-tooltip top>
+                      <template v-slot:activator="{ on }">
+                        <v-btn
+                          v-on="on"
+                          icon
+                          @click="removeArc(selectedObject.id)"
+                        >
+                          <v-icon>mdi-delete</v-icon>
+                        </v-btn>
+                      </template>
+                      <span>Remove selected arc</span>
+                    </v-tooltip>
+                  </v-col>
+                </v-row>
+              </v-scale-transition>
+            </v-toolbar>
+            <v-container
+              fluid
+              align-start
+              fill-height
+              ref="container"
               class="ma-0 pa-0"
-              ref="stage"
-              :config="{
-                id: 'stage',
-                width: stageConfig.width,
-                height: stageConfig.height,
-                draggable: true,
-                scaleX: stageConfig.scale,
-                scaleY: stageConfig.scale,
-                x: stageConfig.x,
-                y: stageConfig.y
-              }"
-              @dblclick="handleStageDoubleClick"
-              @click="handleStageClick"
+              v-resize="resizeStage"
             >
-              <v-layer
-                ref="nodes"
+              <v-stage
+                class="ma-0 pa-0"
+                ref="stage"
+                :config="{
+                  id: 'stage',
+                  width: stageConfig.width,
+                  height: stageConfig.height,
+                  draggable: true,
+                  scaleX: stageConfig.scale,
+                  scaleY: stageConfig.scale,
+                  x: stageConfig.x,
+                  y: stageConfig.y
+                }"
+                @dblclick="handleStageDoubleClick"
+                @click="handleStageClick"
               >
-                <v-circle
-                  class="node"
-                  v-for="node in nodes"
-                  :key="node.id"
-                  :config="{
-                    id: node.id,
-                    x: node.x,
-                    y: node.y,
-                    scaleX: (isObjectSelected(node.id) || (arcSuggestion && arcSuggestion.endNodeId === node.id)) || draggingNodeId === node.id ? 1.15 : 1,
-                    scaleY: (isObjectSelected(node.id) || (arcSuggestion && arcSuggestion.endNodeId === node.id)) || draggingNodeId === node.id ? 1.15 : 1,
-                    fill: getNodeFill(node),
-                    radius: nodeRadius,
-                    stroke: 'grey',
-                    strokeWidth: 1,
-                    shadowColor: 'black',
-                    shadowBlur: 3,
-                    shadowOpacity: 0.0,
-                    draggable: true,
-                    hitStrokeWidth: 30
-                  }"
-                  @click="handleNodeClick"
-                  @dblclick="handleNodeDoubleClick"
-                  @dragstart="handleNodeDragStart"
-                  @dragmove="handleNodeDrag"
-                  @dragend="handleNodeDragEnd"
-                  @mouseenter="handleNodeMouseEnter"
-                  @mouseleave="handleNodeMouseLeave"
-                  @touchstart="handleNodeTouchStart"
-                  @touchmove="handleNodeDrag"
-                  @touchend="handleNodeDragEnd"
+                <v-layer
+                  ref="nodes"
                 >
-                </v-circle>
-              </v-layer>
-              <v-layer
-                ref="arcs"
-              >
-                <v-arrow
-                  v-if="getArcSuggestion !== null"
-                  :config="{
-                    id: getArcSuggestion.id,
-                    points: getArcSuggestion.points,
-                    stroke: arcSelectedColor,
-                    strokeWidth: 2,
-                    tension: 0.6,
-                    dash: [6, 3]
-                  }"
+                  <v-circle
+                    class="node"
+                    v-for="node in nodes"
+                    :key="node.id"
+                    :config="{
+                      id: node.id,
+                      x: node.x,
+                      y: node.y,
+                      scaleX: (isObjectSelected(node.id) || (arcSuggestion && arcSuggestion.endNodeId === node.id)) || draggingNodeId === node.id ? 1.15 : 1,
+                      scaleY: (isObjectSelected(node.id) || (arcSuggestion && arcSuggestion.endNodeId === node.id)) || draggingNodeId === node.id ? 1.15 : 1,
+                      fill: getNodeFill(node),
+                      radius: nodeRadius,
+                      stroke: 'grey',
+                      strokeWidth: 1,
+                      shadowColor: 'black',
+                      shadowBlur: 3,
+                      shadowOpacity: 0.0,
+                      draggable: true,
+                      hitStrokeWidth: 30
+                    }"
+                    @click="handleNodeClick"
+                    @dblclick="handleNodeDoubleClick"
+                    @dragstart="handleNodeDragStart"
+                    @dragmove="handleNodeDrag"
+                    @dragend="handleNodeDragEnd"
+                    @mouseenter="handleNodeMouseEnter"
+                    @mouseleave="handleNodeMouseLeave"
+                    @touchstart="handleNodeTouchStart"
+                    @touchmove="handleNodeDrag"
+                    @touchend="handleNodeDragEnd"
+                  >
+                  </v-circle>
+                </v-layer>
+                <v-layer
+                  ref="arcs"
                 >
-                </v-arrow>
-                <v-arrow
-                  v-for="(arc, i) in getArcs"
-                  :key="i"
-                  :config="{
-                    id: arc.id,
-                    points: arc.points,
-                    stroke: isObjectSelected(arc.id) ? arcSelectedColor : '#212121',
-                    strokeWidth: isObjectSelected(arc.id) ? 3 : (arc.flow ? 1.5 + arc.flow / 10 : 1.5),
-                    opacity: (showResults && !showResultsZeroFlows && !arc.flow && !isObjectSelected(arc.id)) ? 0 : 1,
-                    tension: 0.6,
-                    hitStrokeWidth: $isTouchScreen() ? 30 : 20,
-                    listening: listenArcs
-                  }"
-                  @click="handleArcClick"
-                  @touchstart="handleArcClick"
+                  <v-arrow
+                    v-if="getArcSuggestion !== null"
+                    :config="{
+                      id: getArcSuggestion.id,
+                      points: getArcSuggestion.points,
+                      stroke: arcSelectedColor,
+                      strokeWidth: 2,
+                      tension: 0.6,
+                      dash: [6, 3]
+                    }"
+                  >
+                  </v-arrow>
+                  <v-arrow
+                    v-for="(arc, i) in getArcs"
+                    :key="i"
+                    :config="{
+                      id: arc.id,
+                      points: arc.points,
+                      stroke: isObjectSelected(arc.id) ? arcSelectedColor : '#212121',
+                      strokeWidth: isObjectSelected(arc.id) ? 3 : (arc.flow ? 1.5 + arc.flow / 10 : 1.5),
+                      opacity: (showResults && !showResultsZeroFlows && !arc.flow && !isObjectSelected(arc.id)) ? 0 : 1,
+                      tension: 0.6,
+                      hitStrokeWidth: $isTouchScreen() ? 30 : 20,
+                      listening: listenArcs
+                    }"
+                    @click="handleArcClick"
+                    @touchstart="handleArcClick"
+                  >
+                  </v-arrow>
+                </v-layer>
+                <v-layer
+                  ref="text"
                 >
-                </v-arrow>
-              </v-layer>
-              <v-layer
-                ref="text"
-              >
-                <v-text
-                  v-for="arc in getArcs"
-                  :key="arc.id"
-                  :config="{
-                    id: arc.id,
-                    text: getArcText(arc),
-                    fontSize: arc.flow !== null ? Math.min(Math.max(arc.flow, 10), 32) : 16,
-                    opacity: (showResults && !showResultsZeroFlows && !arc.flow) ? 0 : 1,
-                    x: arc.points.length > 4 ? arc.points[2] : (arc.points[0] + arc.points[2]) / 2,
-                    y: arc.points.length > 4 ? arc.points[3] : (arc.points[1] + arc.points[3]) / 2 + 2,
-                  }"
-                  @click="handleArcClick"
-                  @touchstart="handleArcClick"
-                >
-                </v-text>
-                <v-text
-                  v-for="node in nodes"
-                  :key="node.id"
-                  :config="{
-                    id: node.id,
-                    text: `${node.name}`,
-                    fontSize: 12,
-                    x: node.x - 3 * node.name.length,
-                    y: node.y - 4,
-                    draggable: true,
-                    listening: false,
-                  }"
-                  @click="handleNodeClick"
-                  @dblclick="handleNodeDoubleClick"
-                  @dragstart="handleNodeDragStart"
-                  @dragmove="handleNodeDrag"
-                  @dragend="handleNodeDragEnd"
-                  @mouseenter="handleNodeMouseEnter"
-                  @mouseleave="handleNodeMouseLeave"
-                >
-                </v-text>
-              </v-layer>
-            </v-stage>
-          </v-container>
-        </v-card>
-      </v-col>
+                  <v-text
+                    v-for="arc in getArcs"
+                    :key="arc.id"
+                    :config="{
+                      id: arc.id,
+                      text: getArcText(arc),
+                      fontSize: arc.flow !== null ? Math.min(Math.max(arc.flow, 10), 32) : 16,
+                      opacity: (showResults && !showResultsZeroFlows && !arc.flow) ? 0 : 1,
+                      x: arc.points.length > 4 ? arc.points[2] : (arc.points[0] + arc.points[2]) / 2,
+                      y: arc.points.length > 4 ? arc.points[3] : (arc.points[1] + arc.points[3]) / 2 + 2,
+                    }"
+                    @click="handleArcClick"
+                    @touchstart="handleArcClick"
+                  >
+                  </v-text>
+                  <v-text
+                    v-for="node in nodes"
+                    :key="node.id"
+                    :config="{
+                      id: node.id,
+                      text: `${node.name}`,
+                      fontSize: 12,
+                      x: node.x - 3 * node.name.length,
+                      y: node.y - 4,
+                      draggable: true,
+                      listening: false,
+                    }"
+                    @click="handleNodeClick"
+                    @dblclick="handleNodeDoubleClick"
+                    @dragstart="handleNodeDragStart"
+                    @dragmove="handleNodeDrag"
+                    @dragend="handleNodeDragEnd"
+                    @mouseenter="handleNodeMouseEnter"
+                    @mouseleave="handleNodeMouseLeave"
+                  >
+                  </v-text>
+                </v-layer>
+              </v-stage>
+            </v-container>
+          </v-card>
+        </v-col>
+      </v-row>
     </template>
   </DemoProjectTemplate>
 </template>

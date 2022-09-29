@@ -9,7 +9,7 @@
       </p>
     </template>
     <template v-slot:content>
-      <v-container fluid class="mt-0 pt-0">
+      <v-container fluid class="mt-2 pt-2">
         <v-row>
           <v-col
             class="my-0 py-0"
@@ -156,7 +156,7 @@ export default {
           timeout: this.timeout
         }
       }).then(resp => {
-        this.results = resp.data.data.items
+        this.results = resp.data.data.items.slice(0, this.nItems)
         this.excel = resp.data.data.excel
         this.loading = false
         if (this.results && this.results.length === 0) {

@@ -40,11 +40,11 @@
               class="overline"
               @click="createShareableLink"
             >
-              <span v-if="!creatingShareableLink">Create shareable link</span>
+              <span v-if="!creatingShareableLink">Create link</span>
               <span v-else>Creating link...</span>
             </a>
             <a v-else class="overline" :href="currentPath">
-              Copy the target of this link to share
+              Copy link
             </a>
           </div>
         </v-col>
@@ -382,7 +382,6 @@ export default {
       })
     }, 5000),
     createShareableLink () {
-      // TODO: Create link that can be easily copied!
       this.creatingShareableLink = true
       this.unsavedChanges = true
       this.enableSaving = true

@@ -29,7 +29,7 @@
             v-model="doc1"
             :rules="docRules"
             label="First document"
-            :rows="$vuetify.breakpoint.mdAndUp ? 10 : 4"
+            :rows="$vuetify.breakpoint.mdAndUp ? 6 : 4"
             required
             outlined
           ></v-textarea>
@@ -38,7 +38,7 @@
             v-model="doc2"
             :rules="docRules"
             label="Second document"
-            :rows="$vuetify.breakpoint.mdAndUp ? 10 : 4"
+            :rows="$vuetify.breakpoint.mdAndUp ? 6 : 4"
             required
             outlined
           ></v-textarea>
@@ -57,7 +57,7 @@
               <strong>{{ interpretation }}</strong> to appear in the same context
             </span>
             <span v-else-if="loading">
-              Analyzing...
+              Analyzing, may take a while for the first time...
             </span>
             <span v-else style="color: grey;">
               Results will appear here
