@@ -3,7 +3,7 @@
 echo Installing...
 NAME=jmyrberg-website
 conda env remove -n $NAME -y
-conda create -n $NAME python=3.10 -y && \  # Not GCP, but 3.7. causes problems with OS
+conda create -n $NAME python=3.10 -y && \
 conda activate $NAME && \
 pip install -r ./functions/doc_context_similarity/requirements.txt \
             -r ./functions/get_food_recommender/requirements.txt \

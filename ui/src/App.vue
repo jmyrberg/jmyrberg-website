@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <Toolbar></Toolbar>
-    <v-content>
+    <v-main>
       <v-container
         fluid
         id="main-container"
@@ -11,13 +11,13 @@
           <router-view></router-view>
         </transition>
       </v-container>
-    </v-content>
+    </v-main>
     <v-divider class="mt-4 mb-2 mx-3"></v-divider>
     <Footer></Footer>
     <v-snackbar
       bottom
       :color="getSnackbarColor"
-      :timeout="0"
+      :timeout="-1"
       v-model="snackbar"
       inset
     >
