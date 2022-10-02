@@ -54,37 +54,48 @@ def request_wrapper(original_func=None,
     def _decorate(func):
         @functools.wraps(func)
         def wrapped_func(request):
-            # Request legitimity
-            headers = None
+            # Allowed methods
             if request.method not in allowed_methods:
                 return jsonify({'status': 'error',
                                 'message': 'Method not allowed',
                                 'data': None}), 403
+
+            # CORS
+            CORS_ORIGINS = os.environ['CORS_ORIGINS'].split(';')
+            origin = request.headers.get('origin')
+            headers = {}
+            if '*' in CORS_ORIGINS:
+                headers['Access-Control-Allow-Origin'] = '*'
+            elif origin and origin in CORS_ORIGINS:
+                headers['Access-Control-Allow-Origin'] = origin
+            if len(CORS_ORIGINS) > 1 and '*' not in CORS_ORIGINS:
+                headers['Vary'] = 'Origin'
+
             if request.method == 'OPTIONS':
                 headers = {
-                    'Access-Control-Allow-Origin': '*',
+                    **headers,
                     'Access-Control-Allow-Methods': allowed_methods,
                     'Access-Control-Allow-Headers': ['Content-Type',
                                                      'x-api-key'],
-                    'Access-Control-Max-Age': '3600',
+                    'Access-Control-Max-Age': '3600'
                 }
                 return ('', 204, headers)
-            else:
-                headers = {'Access-Control-Allow-Origin': '*'}
-            # Token
+
+            # API token
             api_key = request.headers.get('X-API-KEY')
-            if not api_key:
+            if api_key is None:
                 return jsonify({'status': 'error',
                                 'message': 'Missing "x-api-key" header',
                                 'data': None}), 401
-            else:
-                try:
-                    Signer(os.environ['SECRET_KEY']).unsign(api_key)
-                except Exception:
-                    return jsonify({'status': 'error',
-                                    'message': 'Invalid access token',
-                                    'data': None}), 401
-            # Function call or error
+
+            try:
+                Signer(os.environ['SECRET_KEY']).unsign(api_key)
+            except Exception:
+                return jsonify({'status': 'error',
+                                'message': 'Invalid access token',
+                                'data': None}), 401
+
+            # Run function
             try:
                 resp, status = func(request)
                 return jsonify(resp), status, headers
@@ -92,6 +103,7 @@ def request_wrapper(original_func=None,
                 return jsonify({'status': 'error',
                                 'message': str(e),
                                 'data': None}), 500, headers
+
         return wrapped_func
 
     if original_func:
