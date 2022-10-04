@@ -1,28 +1,40 @@
 <template>
   <DemoProjectTemplate header="Maximum Flows">
-    <template v-slot:description>
+    <template #description>
       <p>
-        <a href="https://en.wikipedia.org/wiki/Mathematical_optimization" target="_blank">Optimization</a> aims to minimize or maximize an objective function (like cost or margin) with given constraints (like capacities or time windows).
+        <a
+          href="https://en.wikipedia.org/wiki/Mathematical_optimization"
+          target="_blank"
+        >Optimization</a> aims to minimize or maximize an objective function (like cost or margin) with given constraints (like capacities or time windows).
       </p>
       <p class="mb-0">
         Some concrete examples include:
       </p>
       <div class="mt-2">
-        <v-icon class="mr-3">mdi-graph</v-icon>Network flows - maximize the margin of a supply chain with given production and delivery capacities
+        <v-icon class="mr-3">
+          mdi-graph
+        </v-icon>Network flows - maximize the margin of a supply chain with given production and delivery capacities
       </div>
       <div class="mt-3">
-        <v-icon class="mr-3">mdi-truck</v-icon>Vehicle routing - minimize the gas consumption of a vehicle with given truck maximum capacity and delivery time windows</div>
-      <div class="mt-3">
-        <v-icon class="mr-3">mdi-calendar</v-icon>Scheduling - minimize the cost of workforce with given tasks to be completed and workforce schedule preferences
+        <v-icon class="mr-3">
+          mdi-truck
+        </v-icon>Vehicle routing - minimize the gas consumption of a vehicle with given truck maximum capacity and delivery time windows
       </div>
       <div class="mt-3">
-        <v-icon class="mr-3">mdi-cube-outline</v-icon>Bin packing - maximize the number of products packed in a truck with given truck capacities and delivery requirements
+        <v-icon class="mr-3">
+          mdi-calendar
+        </v-icon>Scheduling - minimize the cost of workforce with given tasks to be completed and workforce schedule preferences
+      </div>
+      <div class="mt-3">
+        <v-icon class="mr-3">
+          mdi-cube-outline
+        </v-icon>Bin packing - maximize the number of products packed in a truck with given truck capacities and delivery requirements
       </div>
       <p class="mt-5">
         The following demonstrates a maximum flow problem, where the objective is to maximize the total flow from source to sink node with given flow capacities.
       </p>
     </template>
-    <template v-slot:content>
+    <template #content>
       <v-row
         class="mt-1 pt-1 mx-0 px-0"
         cols="12"
@@ -89,42 +101,44 @@
                 <kbd>Drag canvas / node</kbd>
               </v-col>
               <v-row class="my-0 py-0">
-              <v-col
-                class="my-4 py-3 pb-0 mb-0"
-                xs="12"
-                sm="12"
-                md="12"
-                lg="12"
-                xl="12"
-              >
-                <v-menu
-                  v-model="networkMenu"
-                  open-on-click
-                  bottom
-                  offset-x
-                  transition="slide-y-transition"
+                <v-col
+                  class="my-4 py-3 pb-0 mb-0"
+                  xs="12"
+                  sm="12"
+                  md="12"
+                  lg="12"
+                  xl="12"
                 >
-                  <template v-slot:activator="{ on }">
-                    <v-btn
-                      class="mx-0 px-0"
-                      v-on="on"
-                      text
-                    >
-                      Select example
-                      <v-icon right>mdi-chevron-right</v-icon>
-                    </v-btn>
-                  </template>
-                  <v-list>
-                    <v-list-item
-                      v-for="(item, i) in networkItems"
-                      :key="i"
-                      @click="setNetwork(item.value)"
-                    >
-                      <v-list-item-title>{{ item.text }}</v-list-item-title>
-                    </v-list-item>
-                  </v-list>
-                </v-menu>
-              </v-col>
+                  <v-menu
+                    v-model="networkMenu"
+                    open-on-click
+                    bottom
+                    offset-x
+                    transition="slide-y-transition"
+                  >
+                    <template #activator="{ on }">
+                      <v-btn
+                        class="mx-0 px-0"
+                        text
+                        v-on="on"
+                      >
+                        Select example
+                        <v-icon right>
+                          mdi-chevron-right
+                        </v-icon>
+                      </v-btn>
+                    </template>
+                    <v-list>
+                      <v-list-item
+                        v-for="(item, i) in networkItems"
+                        :key="i"
+                        @click="setNetwork(item.value)"
+                      >
+                        <v-list-item-title>{{ item.text }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </v-col>
               </v-row>
             </v-card-text>
             <v-card-text
@@ -132,10 +146,12 @@
             >
               <div
                 v-for="(message,i) in warningMessages"
-                :key=i
+                :key="i"
                 class="warning--text mt-2"
               >
-                <v-icon color="warning">mdi-alert-circle</v-icon>
+                <v-icon color="warning">
+                  mdi-alert-circle
+                </v-icon>
                 {{ message }}
               </div>
             </v-card-text>
@@ -149,11 +165,11 @@
               >
                 Optimize
               </v-btn>
-              <v-spacer></v-spacer>
+              <v-spacer />
               <v-btn
+                v-if="!(results === null || loading)"
                 class="mb-3"
                 text
-                v-if="!(results === null || loading)"
                 @click="toggleResults"
               >
                 {{ showResults ? 'Hide results' : 'Show results' }}
@@ -162,23 +178,23 @@
             </v-card-actions>
             <v-expand-transition>
               <div v-if="showResults">
-                <v-divider></v-divider>
+                <v-divider />
                 <v-card-text>
                   <p class="my-0 mt-2">
                     <span class="subtitle-1 pt-3">Optimal flow:</span>
                     <br>
                     <span class="title">{{ results.optimalFlow }}</span>
-                    </p>
+                  </p>
                   <p class="my-0 mt-2">
                     <span class="subtitle-1 mt-2">Source side minimum cut: </span>
                     <br>
                     <v-chip
+                      v-for="id in results.sourceMinCut"
+                      :key="id"
+                      small
                       @mouseover="selectNode(id)"
                       @mouseleave="unselectNode(id)"
                       @click="toggleNodeSelection(id)"
-                      small
-                      v-for="id in results.sourceMinCut"
-                      :key="id"
                     >
                       {{ nodes.find(x => x.id === id).name }}
                     </v-chip>
@@ -187,22 +203,21 @@
                     <span class="subtitle-1 mt-2">Sink side minimum cut: </span>
                     <br>
                     <v-chip
+                      v-for="id in results.sinkMinCut"
+                      :key="id"
+                      small
                       @mouseover="selectNode(id)"
                       @mouseleave="unselectNode(id)"
                       @click="toggleNodeSelection(id)"
-                      small
-                      v-for="id in results.sinkMinCut"
-                      :key="id"
                     >
                       {{ nodes.find(x => x.id === id).name }}
                     </v-chip>
                   </p>
                   <v-switch
-                    class="pt-6 mt-0 mb-0 pb-0"
                     v-model="showResultsZeroFlows"
+                    class="pt-6 mt-0 mb-0 pb-0"
                     label="Show zero flows"
-                  >
-                  </v-switch>
+                  />
                 </v-card-text>
               </div>
             </v-expand-transition>
@@ -215,8 +230,7 @@
           lg="8"
           xl="8"
         >
-          <v-card
-          >
+          <v-card>
             <v-toolbar
               :collapse="!selectedObject"
               top
@@ -225,11 +239,11 @@
               elevation="2"
             >
               <v-tooltip top>
-                <template v-slot:activator="{ on }">
+                <template #activator="{ on }">
                   <v-btn
-                    v-on="on"
                     small
                     icon
+                    v-on="on"
                     @click="stageConfig.scale -= 0.1"
                   >
                     <v-icon>mdi-minus</v-icon>
@@ -237,13 +251,13 @@
                 </template>
                 <span>Zoom out</span>
               </v-tooltip>
-              <span style="padding-left: 6px;"></span>
+              <span style="padding-left: 6px;" />
               <v-tooltip top>
-                <template v-slot:activator="{ on }">
+                <template #activator="{ on }">
                   <v-btn
-                    v-on="on"
                     small
                     icon
+                    v-on="on"
                     @click="stageConfig.scale += 0.1"
                   >
                     <v-icon>mdi-plus</v-icon>
@@ -251,8 +265,7 @@
                 </template>
                 <span>Zoom in</span>
               </v-tooltip>
-              <v-scale-transition
-              >
+              <v-scale-transition>
                 <v-row
                   v-if="selectedObject && selectedObject.objectType === 'node'"
                   class="ml-2 mr-auto pt-2"
@@ -265,8 +278,7 @@
                       label="Name"
                       placeholder="Name of the node"
                       hide-details
-                    >
-                    </v-text-field>
+                    />
                   </v-col>
                   <v-col
                     cols="5"
@@ -278,8 +290,7 @@
                       placeholder="Node type"
                       hide-details
                       :disabled="showResults"
-                    >
-                    </v-select>
+                    />
                   </v-col>
                   <v-col
                     class="my-0 py-0 mx-0 px-0"
@@ -287,10 +298,10 @@
                     cols="2"
                   >
                     <v-tooltip top>
-                      <template v-slot:activator="{ on }">
+                      <template #activator="{ on }">
                         <v-btn
-                          v-on="on"
                           icon
+                          v-on="on"
                           @click="removeNode(selectedObject.id)"
                         >
                           <v-icon>mdi-delete</v-icon>
@@ -320,8 +331,7 @@
                       :track-fill-color="arcSelectedColor"
                       :disabled="showResults"
                       hide-details
-                    >
-                    </v-slider>
+                    />
                   </v-col>
                   <v-col
                     class="mt-1 py-0 mx-0 px-0"
@@ -329,10 +339,10 @@
                     align-self-start
                   >
                     <v-tooltip top>
-                      <template v-slot:activator="{ on }">
+                      <template #activator="{ on }">
                         <v-btn
-                          v-on="on"
                           icon
+                          v-on="on"
                           @click="removeArc(selectedObject.id)"
                         >
                           <v-icon>mdi-delete</v-icon>
@@ -345,16 +355,16 @@
               </v-scale-transition>
             </v-toolbar>
             <v-container
+              ref="container"
+              v-resize="resizeStage"
               fluid
               align-start
               fill-height
-              ref="container"
               class="ma-0 pa-0"
-              v-resize="resizeStage"
             >
               <v-stage
-                class="ma-0 pa-0"
                 ref="stage"
+                class="ma-0 pa-0"
                 :config="{
                   id: 'stage',
                   width: stageConfig.width,
@@ -372,9 +382,9 @@
                   ref="nodes"
                 >
                   <v-circle
-                    class="node"
                     v-for="node in nodes"
                     :key="node.id"
+                    class="node"
                     :config="{
                       id: node.id,
                       x: node.x,
@@ -401,8 +411,7 @@
                     @touchstart="handleNodeTouchStart"
                     @touchmove="handleNodeDrag"
                     @touchend="handleNodeDragEnd"
-                  >
-                  </v-circle>
+                  />
                 </v-layer>
                 <v-layer
                   ref="arcs"
@@ -417,8 +426,7 @@
                       tension: 0.6,
                       dash: [6, 3]
                     }"
-                  >
-                  </v-arrow>
+                  />
                   <v-arrow
                     v-for="(arc, i) in getArcs"
                     :key="i"
@@ -434,8 +442,7 @@
                     }"
                     @click="handleArcClick"
                     @touchstart="handleArcClick"
-                  >
-                  </v-arrow>
+                  />
                 </v-layer>
                 <v-layer
                   ref="text"
@@ -453,8 +460,7 @@
                     }"
                     @click="handleArcClick"
                     @touchstart="handleArcClick"
-                  >
-                  </v-text>
+                  />
                   <v-text
                     v-for="node in nodes"
                     :key="node.id"
@@ -474,8 +480,7 @@
                     @dragend="handleNodeDragEnd"
                     @mouseenter="handleNodeMouseEnter"
                     @mouseleave="handleNodeMouseLeave"
-                  >
-                  </v-text>
+                  />
                 </v-layer>
               </v-stage>
             </v-container>
@@ -498,11 +503,11 @@ export default {
   },
   data: () => ({
     breakpointDefaultScales: {
-      'xs': 0.7,
-      'sm': 1.0,
-      'md': 1.0,
-      'lg': 1.2,
-      'xl': 1.25
+      xs: 0.7,
+      sm: 1.0,
+      md: 1.0,
+      lg: 1.2,
+      xl: 1.25
     },
     stageConfig: {
       width: width,
@@ -531,33 +536,6 @@ export default {
     ],
     networkMenu: false
   }),
-  watch: {
-    nodes () {
-      if (this.showResults) {
-        this.removeResults()
-      }
-    },
-    arcs () {
-      if (this.showResults) {
-        this.removeResults()
-      }
-    },
-    sinkNodes (newVal, oldVal) {
-      if (newVal.length > 1) {
-        oldVal[0].type = 'Normal'
-      }
-    },
-    sourceNodes (newVal, oldVal) {
-      if (newVal.length > 1) {
-        oldVal[0].type = 'Normal'
-      }
-    },
-    warningMessages (newVal, oldVal) {
-      if (newVal.length) {
-        this.showResults = false
-      }
-    }
-  },
   computed: {
     getArcSuggestion () {
       if (this.arcSuggestion !== null) {
@@ -589,7 +567,7 @@ export default {
       return (this.sinkNodes.length > 0) && (this.sourceNodes.length > 0)
     },
     warningMessages () {
-      let messages = []
+      const messages = []
       if (this.sinkNodes.length !== 1) {
         messages.push('You must have exactly one sink node!')
       }
@@ -599,6 +577,38 @@ export default {
       return messages
     },
     ...mapGetters(['getResults'])
+  },
+  watch: {
+    nodes () {
+      if (this.showResults) {
+        this.removeResults()
+      }
+    },
+    arcs () {
+      if (this.showResults) {
+        this.removeResults()
+      }
+    },
+    sinkNodes (newVal, oldVal) {
+      if (newVal.length > 1) {
+        oldVal[0].type = 'Normal'
+      }
+    },
+    sourceNodes (newVal, oldVal) {
+      if (newVal.length > 1) {
+        oldVal[0].type = 'Normal'
+      }
+    },
+    warningMessages (newVal, oldVal) {
+      if (newVal.length) {
+        this.showResults = false
+      }
+    }
+  },
+  mounted () {
+    this.setNetwork('small')
+    const breakpointName = this.$vuetify.breakpoint.name
+    this.stageConfig.scale = breakpointName ? this.breakpointDefaultScales[breakpointName] : 1.0
   },
   methods: {
     resizeStage () {
@@ -763,7 +773,7 @@ export default {
       const startNode = this.nodes.find(x => x.id === startNodeId)
       const endNode = this.nodes.find(x => x.id === endNodeId)
       const existingArcs = this.arcs.filter(x => x.id === this.getArcId(endNode.id, startNode.id))
-      let points = this.getArcStartEnd(startNode, endNode)
+      const points = this.getArcStartEnd(startNode, endNode)
       if (existingArcs.length > 0) {
         const arcCurve = this.getArcCurve(startNode, endNode)
         return [points.arcStart.x, points.arcStart.y, arcCurve.x, arcCurve.y, points.arcEnd.x, points.arcEnd.y]
@@ -774,7 +784,7 @@ export default {
     getArcStartEnd (node1, node2) {
       const dx = node1.x - node2.x
       const dy = node1.y - node2.y
-      let angle = Math.atan2(-dy, dx)
+      const angle = Math.atan2(-dy, dx)
       const arcEnd = {
         x: node2.x + -this.nodeRadius * Math.cos(angle + Math.PI),
         y: node2.y + this.nodeRadius * Math.sin(angle + Math.PI)
@@ -790,7 +800,7 @@ export default {
       }
     },
     getArcCurve (node1, node2, curvePower = 20) {
-      let points = this.getArcStartEnd(node1, node2)
+      const points = this.getArcStartEnd(node1, node2)
       const arcCurve = {
         x:
           (points.arcStart.x + points.arcEnd.x) / 2 +
@@ -984,11 +994,6 @@ export default {
       }
     },
     ...mapActions(['showMessage'])
-  },
-  mounted () {
-    this.setNetwork('small')
-    const breakpointName = this.$vuetify.breakpoint.name
-    this.stageConfig.scale = breakpointName ? this.breakpointDefaultScales[breakpointName] : 1.0
   }
 }
 </script>

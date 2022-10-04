@@ -2,10 +2,10 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 
 import Home from '../views/Home.vue'
-import MaximumFlows from '../views/DemoProjects/MaximumFlows.vue'
-import FoodRecommender from '../views/DemoProjects/FoodRecommender.vue'
-import DocContextSimilarity from '../views/DemoProjects/DocContextSimilarity.vue'
-import Finscraper from '../views/DemoProjects/Finscraper.vue'
+const MaximumFlows = () => import(/* webpackChunkName: "maximum-flows" */ '../views/DemoProjects/MaximumFlows.vue')
+const FoodRecommender = () => import(/* webpackChunkName: "food-recommender" */ '../views/DemoProjects/FoodRecommender.vue')
+const DocContextSimilarity = () => import(/* webpackChunkName: "doc-context-similarity" */ '../views/DemoProjects/DocContextSimilarity.vue')
+const Finscraper = () => import(/* webpackChunkName: "finscraper" */ '../views/DemoProjects/Finscraper.vue')
 
 Vue.use(VueRouter)
 

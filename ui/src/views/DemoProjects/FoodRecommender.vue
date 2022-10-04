@@ -1,14 +1,24 @@
 <template>
   <DemoProjectTemplate header="Food Recommender">
-    <template v-slot:description>
+    <template #description>
       <p>
         What shall I cook next? A question I ended up asking myself way too often. This app provides a shareable list that stays relevant through user interactions:
       </p>
       <div>
-        <v-icon color="green" class="mr-1">mdi-silverware-fork-knife</v-icon> "I cooked this" - more likely in the future
+        <v-icon
+          color="green"
+          class="mr-1"
+        >
+          mdi-silverware-fork-knife
+        </v-icon> "I cooked this" - more likely in the future
       </div>
       <div class="mt-3 mb-3">
-        <v-icon color="red" class="mr-1">mdi-update</v-icon> "Not now" - less likely in the future
+        <v-icon
+          color="red"
+          class="mr-1"
+        >
+          mdi-update
+        </v-icon> "Not now" - less likely in the future
       </div>
       <p class="pt-1">
         The score is based on multiplication of the following factors:
@@ -19,21 +29,23 @@
         </ul>
       </p>
     </template>
-    <template v-slot:content>
+    <template #content>
       <v-text-field
         v-model="search"
         label="Search or add item..."
         append-icon="mdi-plus"
-        @click:append="addItem"
-        @keydown.enter="addItem"
         autofocus
         solo
         single-line
         :rules="[ruleNameExists, ruleNameTooShort]"
-      >
-      </v-text-field>
+        @click:append="addItem"
+        @keydown.enter="addItem"
+      />
       <v-row class="my-0 py-0">
-        <v-col class="my-0 py-0" cols="6">
+        <v-col
+          class="my-0 py-0"
+          cols="6"
+        >
           <div class="mt-0 mb-0 py-0">
             <a
               v-if="listId === ''"
@@ -43,16 +55,29 @@
               <span v-if="!creatingShareableLink">Create link</span>
               <span v-else>Creating link...</span>
             </a>
-            <a v-else class="overline" :href="currentPath">
+            <a
+              v-else
+              class="overline"
+              :href="currentPath"
+            >
               Copy link
             </a>
           </div>
         </v-col>
-        <v-col align="right" class="my-0 py-0" cols="6">
-          <div v-if="!enableSaving">
-          </div>
+        <v-col
+          align="right"
+          class="my-0 py-0"
+          cols="6"
+        >
+          <div v-if="!enableSaving" />
           <div v-else-if="unsavedChanges && !saving">
-            <v-icon small left color="warning">mdi-content-save-alert</v-icon>
+            <v-icon
+              small
+              left
+              color="warning"
+            >
+              mdi-content-save-alert
+            </v-icon>
             <span class="overline">Unsaved changes</span>
           </div>
           <div v-else-if="unsavedChanges && saving">
@@ -62,20 +87,24 @@
               indeterminate
               color="primary"
               class="mr-2"
-            >
-            </v-progress-circular>
+            />
             <span class="overline">Saving...</span>
           </div>
           <div v-else-if="!unsavedChanges">
-            <v-icon small left color="primary">mdi-content-save</v-icon>
+            <v-icon
+              small
+              left
+              color="primary"
+            >
+              mdi-content-save
+            </v-icon>
           </div>
-          <div v-else>
-          </div>
+          <div v-else />
         </v-col>
       </v-row>
       <v-data-table
-        class="item-table elevation-1"
         ref="itemTable"
+        class="item-table elevation-1"
         :headers="headers"
         :items="itemsWithScore"
         :expanded.sync="expanded"
@@ -95,9 +124,12 @@
         calculate-widths
         :loading="loadingData"
       >
-        <template v-slot:item.name="{ item }">
+        <template #[`item.name`]="{ item }">
           <div v-if="item.link && item.link.length > 5">
-            <a :href="item.link" target="_blank">
+            <a
+              :href="item.link"
+              target="_blank"
+            >
               <span
                 class="d-inline-block text-truncate"
                 :style="'max-width: ' + ($vuetify.breakpoint.smAndUp ? '100%;' : '100px;')"
@@ -110,7 +142,7 @@
             {{ item.name }}
           </div>
         </template>
-        <template v-slot:item.data-table-expand="props">
+        <template #[`item.data-table-expand`]="props">
           <v-row class="ma-0 pa-0">
             <v-icon
               class="mr-2"
@@ -125,7 +157,7 @@
             >
               mdi-update
             </v-icon>
-            <v-spacer></v-spacer>
+            <v-spacer />
             <v-icon
               :class="{
                 'v-data-table__expand-icon': true,
@@ -138,17 +170,17 @@
             </v-icon>
           </v-row>
         </template>
-        <template v-slot:item.score="{ item }">
+        <template #[`item.score`]="{ item }">
           <v-chip
             :color="getScoreColor(item.score)"
-            @click="showScores(item)"
             dark
             small
+            @click="showScores(item)"
           >
             {{ item.score }}
           </v-chip>
         </template>
-        <template v-slot:expanded-item="{ headers, item }">
+        <template #expanded-item="{ headers, item }">
           <td
             :colspan="headers.length"
             :class="{'expanded-closing': !transitioned[item.id]}"
@@ -156,29 +188,43 @@
           >
             <v-expand-transition>
               <div v-show="transitioned[item.id]">
-                <v-row>
-                  <v-col class="mb-0 pb-0" cols="12" lg="6">
+                <v-row
+                  cols="12"
+                  class="mt-3 mb-3"
+                >
+                  <v-col
+                    cols="12"
+                    lg="6"
+                    class="my-0 py-0"
+                  >
                     <v-text-field
+                      v-model="item.name"
                       label="Name"
                       color="primary"
-                      v-model="item.name"
                       :rules="[ruleNameTooShort]"
-                    ></v-text-field>
+                    />
                   </v-col>
-                  <v-col class="mb-0 pb-0" cols="12" lg="6">
+                  <v-col
+                    cols="12"
+                    lg="6"
+                    class="my-0 py-0"
+                  >
                     <v-text-field
+                      v-model="item.link"
                       label="Link"
                       placeholder="E.g. https://kotikokki.net"
                       color="primary"
-                      v-model="item.link"
                       :rules="[ruleLinkValid]"
-                    ></v-text-field>
+                    />
                   </v-col>
-                  <v-col class="mb-0 pb-0 mt-0" cols="12">
+                  <v-col
+                    cols="12"
+                    class="pt-0 mt-0"
+                  >
                     <v-combobox
+                      v-model="item.tags"
                       label="Tags"
                       color="primary"
-                      v-model="item.tags"
                       multiple
                       chips
                       small-chips
@@ -186,10 +232,14 @@
                       hide-details
                       hide-selected
                       :allow-overflow="false"
-                    >
-                    </v-combobox>
+                    />
                   </v-col>
-                  <v-col align="left" class="mt-4 mb-1" cols="12" lg="12">
+                  <v-col
+                    align="left"
+                    cols="12"
+                    lg="12"
+                    class="pb-1 mb-1"
+                  >
                     <v-btn
                       color="error"
                       small
@@ -197,7 +247,9 @@
                       outlined
                       @click="deleteItem(item)"
                     >
-                      <v-icon left>mdi-delete</v-icon>
+                      <v-icon left>
+                        mdi-delete
+                      </v-icon>
                       Remove
                     </v-btn>
                   </v-col>
@@ -208,56 +260,64 @@
         </template>
       </v-data-table>
       <v-dialog
-        v-model="showScoreDialog"
         v-if="showScoreDialog"
+        v-model="showScoreDialog"
         max-width="600"
       >
         <v-card>
           <v-card-title>Scores</v-card-title>
           <v-card-text>
-            <div class="overline mt-3 mb-1"><b>R</b>ecency ({{ dialogItem.eaten.length ? 'Latest ' + moment(dialogItem.eaten.slice(-1)[0]).format('D.M.YYYY') : 'Never eaten' }})</div>
+            <div class="overline mt-3 mb-1">
+              <b>R</b>ecency ({{ dialogItem.eaten.length ? 'Latest ' + moment(dialogItem.eaten.slice(-1)[0]).format('D.M.YYYY') : 'Never eaten' }})
+            </div>
             <v-progress-linear
               color="red"
               height="20"
               :value="dialogItem.recency"
             >
-              <template v-slot="{ value }">
+              <template #default="{ value }">
                 {{ value }} %
               </template>
             </v-progress-linear>
-            <div class="overline mt-3 mb-1"><b>F</b>requency ({{ dialogItem.eaten.length ? `${dialogItem.frequency >= 0.999 ? '&ge;' : ''}` + `${dialogItem.frequency / 100} times per week` : 'Never eaten' }})</div>
+            <div class="overline mt-3 mb-1">
+              <b>F</b>requency ({{ dialogItem.eaten.length ? `${dialogItem.frequency >= 0.999 ? '&ge;' : ''}` + `${dialogItem.frequency / 100} times per week` : 'Never eaten' }})
+            </div>
             <v-progress-linear
               color="green"
               height="20"
               :value="dialogItem.frequency"
             >
-              <template v-slot="{ value }">
+              <template #default="{ value }">
                 {{ value }} %
               </template>
             </v-progress-linear>
-            <div class="overline mt-3 mb-1"><b>P</b>opularity</div>
+            <div class="overline mt-3 mb-1">
+              <b>P</b>opularity
+            </div>
             <v-progress-linear
               color="blue"
               height="20"
               :value="dialogItem.popularity"
             >
-              <template v-slot="{ value }">
+              <template #default="{ value }">
                 {{ value }} %
               </template>
             </v-progress-linear>
-            <div class="overline mt-3 mb-1"><b>Score = R * F * P</b></div>
+            <div class="overline mt-3 mb-1">
+              <b>Score = R * F * P</b>
+            </div>
             <v-progress-linear
               :color="getScoreColor(dialogItem.score)"
               height="20"
               :value="dialogItem.score"
             >
-              <template v-slot="{ value }">
+              <template #default="{ value }">
                 <strong>{{ value }} %</strong>
               </template>
             </v-progress-linear>
           </v-card-text>
           <v-card-actions>
-            <v-spacer></v-spacer>
+            <v-spacer />
             <v-btn
               color="primary"
               text
@@ -273,14 +333,16 @@
 </template>
 
 <script>
+import { debounce } from 'lodash'
 import moment from 'moment'
 import DemoProjectTemplate from '@/components/DemoProjects/DemoProjectTemplate'
-let _ = require('lodash')
 export default {
   name: 'FoodRecommender',
-  props: ['id'],
   components: {
     DemoProjectTemplate
+  },
+  props: {
+    id: { type: String, default: undefined }
   },
   data: () => ({
     moment: moment,
@@ -306,18 +368,6 @@ export default {
     creatingShareableLink: false,
     loadingData: false
   }),
-  watch: {
-    items: {
-      handler (newVal, oldVal) {
-        if (this.enableSaving) {
-          this.unsavedChanges = true
-          this.saveData()
-          this.saving = true
-        }
-      },
-      deep: true
-    }
-  },
   computed: {
     uniqueNames () {
       const allNames = []
@@ -347,6 +397,28 @@ export default {
       return window.location.href
     }
   },
+  watch: {
+    items: {
+      handler (newVal, oldVal) {
+        if (this.enableSaving) {
+          this.unsavedChanges = true
+          this.saveData()
+          this.saving = true
+        }
+      },
+      deep: true
+    }
+  },
+  mounted () {
+    if (this.id) {
+      this.listId = this.id
+      this.getData().then(() => {
+        if (this.items.length > 0) {
+          this.enableSaving = true
+        }
+      })
+    }
+  },
   methods: {
     getData () {
       this.loadingData = true
@@ -362,7 +434,7 @@ export default {
         this.loadingData = false
       })
     },
-    saveData: _.debounce(function () {
+    saveData: debounce(function () {
       this.saving = true
       return this.$api.post('/post_food_recommender',
         { data: { items: this.items } },
@@ -462,8 +534,8 @@ export default {
     },
     getRandomId () {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        let r = Math.random() * 16 | 0
-        let v = c === 'x' ? r : (r & 0x3 | 0x8)
+        const r = Math.random() * 16 | 0
+        const v = c === 'x' ? r : (r & 0x3 | 0x8)
         return v.toString(16)
       })
     },
@@ -487,16 +559,6 @@ export default {
       const id = item.id
       this.$set(this.transitioned, id, false)
       this.closeTimeouts[id] = setTimeout(() => this.$refs.itemTable.expand(item, false), 600)
-    }
-  },
-  mounted () {
-    if (this.id) {
-      this.listId = this.id
-      this.getData().then(() => {
-        if (this.items.length > 0) {
-          this.enableSaving = true
-        }
-      })
     }
   }
 }

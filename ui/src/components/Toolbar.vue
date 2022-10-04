@@ -6,12 +6,23 @@
     color="primary"
   >
     <v-container fluid>
-      <v-row class="ma-n4 pa-0" justify="center" align="center">
-        <v-col cols="12" id="toolbar-container" class="ma-0 pa-0">
-          <div class="ma-0 pa-0" v-bind:class="`${$vuetify.breakpoint.smAndUp ? 'text-right' : 'text-center'}`">
-            <v-spacer></v-spacer>
+      <v-row
+        class="ma-n4 pa-0"
+        justify="center"
+        align="center"
+      >
+        <v-col
+          id="toolbar-container"
+          cols="12"
+          class="ma-0 pa-0"
+        >
+          <div
+            class="ma-0 pa-0"
+            :class="`${$vuetify.breakpoint.smAndUp ? 'text-right' : 'text-center'}`"
+          >
+            <v-spacer />
             <v-hover
-              v-slot:default="{ hover }"
+              v-slot="{ hover }"
             >
               <v-btn
                 class="px-2"
@@ -25,7 +36,7 @@
               </v-btn>
             </v-hover>
             <v-hover
-              v-slot:default="{ hover }"
+              v-slot="{ hover }"
             >
               <v-btn
                 class="px-3"
@@ -39,7 +50,7 @@
               </v-btn>
             </v-hover>
             <v-hover
-              v-slot:default="{ hover }"
+              v-slot="{ hover }"
             >
               <v-btn
                 class="px-2"
@@ -61,7 +72,7 @@
 
 <script>
 export default {
-  name: 'toolbar',
+  name: 'Toolbar',
   data: () => ({
   }),
   methods: {

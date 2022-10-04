@@ -1,12 +1,22 @@
 <template>
-  <v-row align="center" justify="center">
-    <v-col cols="12" class="pt-2 mt-2 mb-0 pb-0">
+  <v-row
+    align="center"
+    justify="center"
+  >
+    <v-col
+      cols="12"
+      class="pt-2 mt-2 mb-0 pb-0"
+    >
       <div class="text-center align-center">
         <span class="headline text-uppercase font-weight-light">
           {{ header }}
         </span>
       </div>
-      <v-row align="center" justify="center" class="my-0 py-0">
+      <v-row
+        align="center"
+        justify="center"
+        class="my-0 py-0"
+      >
         <v-btn
           icon
           color="black"
@@ -23,20 +33,26 @@
     </v-col>
     <v-expand-transition duration="800">
       <div v-if="showDescription">
-        <v-col cols="12" class="my-0 py-0">
-          <slot name="description"></slot>
+        <v-col
+          cols="12"
+          class="my-0 py-0"
+        >
+          <slot name="description" />
         </v-col>
       </div>
     </v-expand-transition>
-    <v-col cols="12" class="mt-0 pt-0">
-      <slot name="content"></slot>
+    <v-col
+      cols="12"
+      class="mt-0 pt-0"
+    >
+      <slot name="content" />
     </v-col>
   </v-row>
 </template>
 
 <script>
 export default {
-  name: 'demo-project-template',
+  name: 'DemoProjectTemplate',
   props: {
     header: { default: '', type: String }
   },
@@ -45,9 +61,9 @@ export default {
   }),
   computed: {
   },
-  methods: {
-  },
   mounted () {
+  },
+  methods: {
   }
 }
 </script>

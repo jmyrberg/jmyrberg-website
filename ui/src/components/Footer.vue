@@ -1,9 +1,13 @@
 <template>
   <v-container fluid>
-    <v-row align="center" justify="center" class="mt-0">
+    <v-row
+      align="center"
+      justify="center"
+      class="mt-0"
+    >
       <div class="text-xs-center">
         <v-hover
-          v-slot:default="{ hover }"
+          v-slot="{ hover }"
         >
           <v-btn
             icon
@@ -16,7 +20,7 @@
           </v-btn>
         </v-hover>
         <v-hover
-          v-slot:default="{ hover }"
+          v-slot="{ hover }"
         >
           <v-btn
             icon
@@ -30,7 +34,11 @@
         </v-hover>
       </div>
     </v-row>
-    <v-row align="center" justify="center" class="mt-3 mb-3">
+    <v-row
+      align="center"
+      justify="center"
+      class="mt-3 mb-3"
+    >
       <div class="font-weight-light">
         &copy; {{ new Date().getFullYear() }} Jesse Myrberg
       </div>
@@ -40,7 +48,7 @@
 
 <script>
 export default {
-  name: 'toolbar',
+  name: 'Toolbar',
   data: () => ({
     style: {
       toolbarHeight: { xs: 210, sm: 240, md: 240, lg: 240, xl: 240 },

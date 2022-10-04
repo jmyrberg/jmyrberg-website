@@ -108,7 +108,7 @@ def get_food_recommender(request):
             storage_client = Client()
         bucket_name = os.getenv('FOOD_RECOMMENDER_BUCKET_NAME',
                                 'jmyrberg-food-recommender')
-        blob_name = f'/data/{list_id}.json'
+        blob_name = f'data/{list_id}.json'
         blob = storage_client.bucket(bucket_name).get_blob(blob_name)
         if blob:
             data = json.loads(blob.download_as_string())

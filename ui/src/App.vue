@@ -1,28 +1,33 @@
 <template>
   <v-app>
-    <Toolbar></Toolbar>
+    <Toolbar />
     <v-main>
       <v-container
-        fluid
         id="main-container"
+        fluid
         class="overflow-y-auto"
       >
-        <transition name="fade" mode="out-in">
-          <router-view></router-view>
+        <transition
+          name="fade"
+          mode="out-in"
+        >
+          <router-view />
         </transition>
       </v-container>
     </v-main>
-    <v-divider class="mt-4 mb-2 mx-3"></v-divider>
-    <Footer></Footer>
+    <v-divider class="mt-4 mb-2 mx-3" />
+    <Footer />
     <v-snackbar
+      v-model="snackbar"
       bottom
       :color="getSnackbarColor"
       :timeout="-1"
-      v-model="snackbar"
       inset
     >
-      <div class="text-center">{{ getMessage }}</div>
-      <template v-slot:action="{ attrs }">
+      <div class="text-center">
+        {{ getMessage }}
+      </div>
+      <template #action="{ attrs }">
         <v-btn
           v-bind="attrs"
           color="white"
@@ -61,10 +66,10 @@ export default {
     },
     ...mapGetters(['getMessage', 'getSnackbarColor', 'getSnackbar'])
   },
+  mounted () {
+  },
   methods: {
     ...mapActions(['closeMessage'])
-  },
-  mounted () {
   }
 }
 </script>

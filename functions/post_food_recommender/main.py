@@ -104,7 +104,7 @@ def post_food_recommender(request):
             storage_client = Client()
         bucket_name = os.getenv('FOOD_RECOMMENDER_BUCKET_NAME',
                                 'jmyrberg-food-recommender')
-        blob_name = f'/data/{list_id}.json'
+        blob_name = f'data/{list_id}.json'
         new_blob = storage_client.bucket(bucket_name).blob(blob_name)
         new_blob.upload_from_string(json.dumps(data))
         return {'status': 'success',
