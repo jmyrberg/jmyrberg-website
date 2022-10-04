@@ -1,15 +1,24 @@
 <template>
   <DemoProjectTemplate header="Finscraper">
-    <template v-slot:description>
+    <template #description>
       <p>
-        This tool demonstrates the use of <b><a href="https://github.com/jmyrberg/finscraper" target="_blank">finscraper</a></b> Python library for fetching content from popular Finnish websites. You may define the number of items to be fetched and download them in Excel or JSON format. The maximum number of items in this demo is limited to 50 - please see the <a href="https://finscraper.readthedocs.io/" target="_blank">library documentation</a> for more extensive usage.
+        This tool demonstrates the use of <b><a
+          href="https://github.com/jmyrberg/finscraper"
+          target="_blank"
+        >finscraper</a></b> Python library for fetching content from popular Finnish websites. You may define the number of items to be fetched and download them in Excel or JSON format. The maximum number of items in this demo is limited to 50 - please see the <a
+          href="https://finscraper.readthedocs.io/"
+          target="_blank"
+        >library documentation</a> for more extensive usage.
       </p>
       <p>
         The same technology can be used for fetching any kind of content on the web. Typical use cases include automated lead generation, product price comparison, brand sentiment monitoring, or data collection for machine learning.
       </p>
     </template>
-    <template v-slot:content>
-      <v-container fluid class="mt-2 pt-2">
+    <template #content>
+      <v-container
+        fluid
+        class="mt-2 pt-2"
+      >
         <v-row>
           <v-col
             class="my-0 py-0"
@@ -24,8 +33,7 @@
               label="Spider"
               :loading="initLoading"
               :placeholder="initLoading ? 'Loading spiders, please wait...' : 'Select spider to use'"
-            >
-            </v-select>
+            />
           </v-col>
           <v-col
             class="my-0 py-0"
@@ -35,16 +43,15 @@
             md="4"
           >
             <v-slider
-              class="pt-4"
               v-model="nItems"
+              class="pt-4"
               :disabled="initLoading"
               label="# items"
               hint="Number of items to fetch"
               min="1"
               max="50"
               thumb-label="always"
-            >
-            </v-slider>
+            />
           </v-col>
           <v-col
             class="my-0 pt-2 pb-0"
@@ -54,42 +61,60 @@
             md="4"
           >
             <v-tooltip top>
-              <template v-slot:activator="{ on }">
+              <template #activator="{ on }">
                 <v-btn
-                  v-on="on"
                   :disabled="initLoading"
                   outlined
-                  @click="scrape"
                   :loading="loading"
+                  v-on="on"
+                  @click="scrape"
                 >
-                  <v-icon left>mdi-spider</v-icon>
+                  <v-icon left>
+                    mdi-spider
+                  </v-icon>
                   Scrape
                 </v-btn>
               </template>
               <span>Fetch at least {{ nItems }} items</span>
             </v-tooltip>
             <v-menu
-              v-model="showDownloadMenu"
               v-if="results.length > 0"
+              v-model="showDownloadMenu"
               bottom
               offset-y
               transition="slide-y-transition"
             >
-              <template v-slot:activator="{ on }">
+              <template #activator="{ on }">
                 <v-btn
-                  v-on="on"
                   text
+                  v-on="on"
                 >
                   Download
-                  <v-icon right>{{ showDownloadMenu ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+                  <v-icon right>
+                    {{ showDownloadMenu ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
+                  </v-icon>
                 </v-btn>
               </template>
               <v-list>
                 <v-list-item @click="downloadExcel">
-                  <v-list-item-title><v-icon left color="green darken-2">mdi-file-excel-box</v-icon>Excel</v-list-item-title>
+                  <v-list-item-title>
+                    <v-icon
+                      left
+                      color="green darken-2"
+                    >
+                      mdi-file-excel-box
+                    </v-icon>Excel
+                  </v-list-item-title>
                 </v-list-item>
                 <v-list-item @click="downloadJSON">
-                  <v-list-item-title><v-icon left color="yellow darken-3">mdi-code-json</v-icon>JSON</v-list-item-title>
+                  <v-list-item-title>
+                    <v-icon
+                      left
+                      color="yellow darken-3"
+                    >
+                      mdi-code-json
+                    </v-icon>JSON
+                  </v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
@@ -108,8 +133,8 @@
               <v-expansion-panel-header>{{ idx + 1 }}: {{ 'title' in item ? item.title : ('name' in item ? item.name : item.url) }}</v-expansion-panel-header>
               <v-expansion-panel-content>
                 <v-list-item
-                  v-for="(key, idx) in Object.keys(item)"
-                  :key="idx"
+                  v-for="(key, itemIdx) in Object.keys(item)"
+                  :key="itemIdx"
                 >
                   <v-list-item-content><span class="title">{{ key }}</span> {{ item[key] }}</v-list-item-content>
                 </v-list-item>
@@ -142,9 +167,12 @@ export default {
     excel: null,
     showDownloadMenu: false
   }),
+  computed: {
+  },
   watch: {
   },
-  computed: {
+  mounted () {
+    this.getSpiders()
   },
   methods: {
     scrape () {
@@ -222,9 +250,6 @@ export default {
       saveAs(blob, 'data.json')
     },
     ...mapActions(['showMessage'])
-  },
-  mounted () {
-    this.getSpiders()
   }
 }
 </script>
