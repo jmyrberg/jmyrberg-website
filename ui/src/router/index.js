@@ -2,6 +2,7 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 
 import Home from '../views/Home.vue'
+const Forecaster = () => import(/* webpackChunkName: "forecaster" */ '../views/DemoProjects/Forecaster.vue')
 const MaximumFlows = () => import(/* webpackChunkName: "maximum-flows" */ '../views/DemoProjects/MaximumFlows.vue')
 const FoodRecommender = () => import(/* webpackChunkName: "food-recommender" */ '../views/DemoProjects/FoodRecommender.vue')
 const DocContextSimilarity = () => import(/* webpackChunkName: "doc-context-similarity" */ '../views/DemoProjects/DocContextSimilarity.vue')
@@ -15,6 +16,11 @@ const routes = [
     alias: '/home',
     name: 'home',
     component: Home
+  },
+  {
+    path: '/demo-projects/forecaster',
+    name: 'forecaster',
+    component: Forecaster
   },
   {
     path: '/demo-projects/maximum-flows',

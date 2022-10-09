@@ -94,6 +94,14 @@ export default {
     return {
       cards: [
         {
+          title: 'Forecaster',
+          subtitle: 'Time Series Forecasting',
+          text: 'How many units of product will be sold next month? Improve your planning by understand the future better! The Forecaster will predict future figures for your own dataset.',
+          labels: ['Time Series', 'Forecasting', 'Prediction'],
+          to: 'forecaster',
+          src: require('@/assets/doc-context-similarity-min.jpg')
+        },
+        {
           title: 'Document Context Similarity',
           subtitle: 'Natural Language Processing',
           text: 'The past few years have shown tremendous progress in Natural Language Processing. This tool lets you predict whether two Finnish documents are likely to appear in the same context.',

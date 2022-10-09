@@ -5,6 +5,7 @@ import store from './store'
 import axios from 'axios'
 import vuetify from './plugins/vuetify'
 import VueKonva from 'vue-konva'
+import VueApexCharts from 'vue-apexcharts'
 
 const ENV = process.env.NODE_ENV
 const API_URL = process.env.VUE_APP_API_URL
@@ -13,6 +14,8 @@ const API_KEY = process.env.VUE_APP_API_KEY
 Vue.config.productionTip = false
 
 Vue.use(VueKonva)
+Vue.use(VueApexCharts)
+Vue.component('ApexChart', VueApexCharts)
 
 export const api = axios.create({
   baseURL: API_URL,
