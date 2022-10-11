@@ -21,18 +21,18 @@ Forecasting steps:
 4)
 
 TODO:
-- Second page responsive formatting
-- Third page responsive formatting
-- 3-step mode (?)
 - Warnings
-- Limit size of inputs
-- Ad-hoc tokenization based on time and data or sth
-- xaxis label in wrong place
-
+    - File size limit
+    - Number of rows limit
+- Ad-hoc tokenization / recaptcha based on time and data etc.
+- xaxis label in wrong place?
+- Fine-tune all formatting and responsiveness
 """
 
 
+import base64
 import functools
+import io
 import json
 import os
 import traceback
@@ -118,6 +118,21 @@ def forecaster(request):
     """TODO"""
     mode = request.form['mode']
     data = {}
+
+    # Get sample file
+    if mode == 'sampleFile':
+        if os.getenv('ENV', 'production') == 'local':
+            cur_dir = os.path.dirname(os.path.realpath(__file__))
+            os.chdir(cur_dir)
+
+        print('Converting Excel...')
+        buffer = io.BytesIO()
+        df = pd.read_excel('./sample-data.xlsx').to_excel(buffer, index=False)
+        buffer.seek(0)
+        excel_b64 = base64.b64encode(buffer.read()).decode('utf-8')
+        return {'status': 'success',
+                'message': 'Sample file obtained successfully!',
+                'data': {'excel': excel_b64}}, 200
 
     # Read inputs as df
     file = request.files['inputFile']
