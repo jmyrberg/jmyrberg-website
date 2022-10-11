@@ -4,8 +4,6 @@
 import pandas as pd
 
 
-
-
 def read_file(file, filename):
     ext = filename.split('.')[-1].lower()
     if ext in ('xls', 'xlsx'):
@@ -52,7 +50,6 @@ def convert_num_cols(df):
 
 def find_freq(srs):
     return pd.infer_freq(srs)
-
 
 def find_freqs(df):
     return df.select_dtypes('datetime').apply(find_freq).to_dict()
