@@ -1,1 +1,2 @@
-mknapsack==1.1.6
+statsforecast==1.1.1
+xlrd==2.0.1
