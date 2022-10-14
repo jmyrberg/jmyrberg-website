@@ -2,6 +2,17 @@
 # Set variables into './functions/.env.production' before running
 API_REGION=europe-west1
 
+gcloud functions deploy forecaster \
+    --runtime python310 \
+    --trigger-http \
+    --allow-unauthenticated \
+    --memory 512MB \
+    --source ./functions/forecaster \
+    --region $API_REGION \
+    --max-instances 1 \
+    --timeout 120 \
+    --set-env-vars "$(paste -d, -s ./functions/.env.production)"
+
 gcloud functions deploy disable_billing \
     --runtime python310 \
     --trigger-topic billing-information \
