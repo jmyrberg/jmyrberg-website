@@ -1,12 +1,4 @@
-"""Module for forecaster.
-
-TODO:
-- Add meta tags
-  https://search.google.com/search-console/sitemaps?resource_id=sc-domain%3Ajmyrberg.com
-  https://github.com/cheap-glitch/vue-cli-plugin-sitemap#url-meta-tags
-  https://stackoverflow.com/questions/68460745/adding-a-sitemap-to-a-vuejs-application
-- Ad-hoc tokenization / recaptcha based on time and data etc.
-"""
+"""Module for forecaster."""
 
 
 import base64
