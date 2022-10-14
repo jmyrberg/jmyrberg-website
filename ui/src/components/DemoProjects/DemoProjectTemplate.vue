@@ -15,7 +15,7 @@
       <v-row
         align="center"
         justify="center"
-        class="my-0 py-0"
+        class="my-1 py-1"
       >
         <v-btn
           icon
