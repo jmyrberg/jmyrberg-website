@@ -6,7 +6,7 @@ gcloud functions deploy forecaster \
     --runtime python310 \
     --trigger-http \
     --allow-unauthenticated \
-    --memory 512MB \
+    --memory 2048MB \
     --source ./functions/forecaster \
     --region $API_REGION \
     --max-instances 1 \
