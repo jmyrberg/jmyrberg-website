@@ -1,34 +1,45 @@
 import Vue from 'vue'
+import VueRouter from 'vue-router'
 import App from './App.vue'
-import router from './router'
+import { routes } from './routes/index.js'
 import store from './store'
 import axios from 'axios'
 import vuetify from './plugins/vuetify'
 import VueKonva from 'vue-konva'
+import VueApexCharts from 'vue-apexcharts'
 
-const ENV = process.env.NODE_ENV
 const API_URL = process.env.VUE_APP_API_URL
 const API_KEY = process.env.VUE_APP_API_KEY
 
 Vue.config.productionTip = false
 
 Vue.use(VueKonva)
+Vue.use(VueApexCharts)
+Vue.component('ApexChart', VueApexCharts)
 
+Vue.prototype.$isTouchScreen = function () {
+  return ('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)
+}
+
+// API
 export const api = axios.create({
   baseURL: API_URL,
   headers: { common: { 'x-api-key': API_KEY } }
 })
-api.interceptors.request.use((config) => {
-  // Convert /api?param1=bla -> /api/?param1= for Cloud Functions
-  if (ENV === 'production' && config.params !== undefined && config.url[config.url.length - 1] !== '/' && config.params.constructor === Object) {
-    config.url += '/'
-  }
-  return config
-})
 Vue.prototype.$api = api
-Vue.prototype.$isTouchScreen = function () {
-  return ('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)
-}
+
+// Router
+Vue.use(VueRouter)
+const router = new VueRouter({
+  routes,
+  scrollBehavior (to, from, savedPosition) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve({ x: 0, y: 0 })
+      }, 250)
+    })
+  }
+})
 
 new Vue({
   router,

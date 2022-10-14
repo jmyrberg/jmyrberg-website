@@ -1,4 +1,8 @@
 const webpack = require('webpack')
+// eslint-disable-next-line no-global-assign
+require = require('esm')(module)
+const { routes } = require('./src/routes')
+
 module.exports = {
   transpileDependencies: [
     'vuetify'
@@ -25,6 +29,15 @@ module.exports = {
     },
     compression: {
       modes: [] // Done by GCP
+    },
+    sitemap: {
+      baseURL: 'https://jmyrberg.com',
+      defaults: {
+        lastmod: '2022-10-12',
+        changefreq: 'monthly',
+        priority: 0.5
+      },
+      routes
     }
   },
   parallel: false,
