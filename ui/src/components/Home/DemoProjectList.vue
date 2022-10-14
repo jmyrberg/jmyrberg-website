@@ -99,7 +99,7 @@ export default {
           text: 'How many units of product will be sold next month? Improve your decision-making by understanding the future better! The Forecaster lets you predict the future with your own dataset.',
           labels: ['Time Series', 'Forecasting', 'Prediction'],
           to: 'forecaster',
-          src: require('@/assets/forecaster.png')
+          src: require('@/assets/forecaster-min.png')
         },
         {
           title: 'Document Context Similarity',
