@@ -2,308 +2,426 @@
   <DemoProjectTemplate header="Forecaster">
     <template #description>
       <p>
-        TODO: Explanation
+        <a
+          href="https://en.wikipedia.org/wiki/Time_series"
+          target="_blank"
+        >
+          Time series forecasting
+        </a>
+        &nbsp;predicts the future from historical data. The main idea is to drive <i>strategic decision-making</i> through better understanding of outcomes that are more and less likely to occur in the future.
+      </p>
+      <p class="mb-0">
+        Examples of time series forecasting use cases:
+      </p>
+      <div class="mt-2">
+        <v-icon class="mr-3">
+          mdi-cart-outline
+        </v-icon>
+        Product demand - keep your customers and bottom line happy by matching the inputs and outputs
+      </div>
+      <div class="mt-2 pt-0">
+        <v-icon class="mr-3">
+          mdi-web
+        </v-icon>
+        Website traffic - plan ahead the capacity you'll need to meet the demand
+      </div>
+      <div class="mt-2 pt-0">
+        <v-icon class="mr-3">
+          mdi-finance
+        </v-icon>
+        Financials - understand the future outlook to make more informed business decisions
+      </div>
+      <div class="mt-2 pt-0">
+        <v-icon class="mr-3">
+          mdi-repeat
+        </v-icon>
+        Understanding cyclic and seasonal patterns of your business
+      </div>
+      <p class="mt-5">
+        Use the <b>Forecaster</b> tool below to create forecasts for your own datasets or the sample provided.
       </p>
     </template>
     <template #content>
-      <v-container
-        fluid
-        class="mt-1 pt-1 mx-0 px-0"
+      <v-card
+        :style="{
+          'min-height': chartHeight + 72 + 68 + 'px'
+        }"
       >
-        <v-stepper
-          v-model="step"
-          flat
+        <v-container
+          fluid
+          class="mt-1 pt-1 mx-0 px-0"
         >
-          <v-row justify="center">
-            <v-col
-              xs="12"
-              sm="12"
-              md="10"
-              lg="10"
-              xl="8"
-            >
-              <v-stepper-header>
-                <v-stepper-step
-                  :complete="maxEditableStep > 1"
-                  :editable="maxEditableStep >= 1"
-                  edit-icon="$complete"
-                  step="1"
-                  @click="step = 1"
-                >
-                  Data
-                </v-stepper-step>
-                <v-divider />
-                <v-stepper-step
-                  :complete="maxEditableStep > 2"
-                  :editable="maxEditableStep >= 2"
-                  edit-icon="$complete"
-                  step="2"
-                >
-                  Parameters
-                </v-stepper-step>
-                <v-divider />
-                <v-stepper-step
-                  :complete="maxEditableStep > 3"
-                  :editable="maxEditableStep >= 3"
-                  edit-icon="$complete"
-                  step="3"
-                >
-                  Forecast
-                </v-stepper-step>
-              </v-stepper-header>
-            </v-col>
-          </v-row>
-
-          <v-stepper-content
-            class="my-2 py-2 mx-1 px-1"
-            step="1"
+          <v-stepper
+            v-model="step"
+            flat
           >
             <v-row
-              justify="center"
-            >
-              <v-col
-                xs="12"
-                sm="8"
-                md="6"
-                lg="6"
-                xl="6"
-              >
-                <v-file-input
-                  v-model="file"
-                  prepend-icon=""
-                  :loading="loadingPrepare || loadingSampleFile"
-                  accept=".csv,.xls,.xlsx"
-                  label="Select Excel or CSV file..."
-                >
-                  <template #prepend-inner>
-                    <v-icon
-                      left
-                      color="green darken-2"
-                    >
-                      mdi-file-excel-box
-                    </v-icon>
-                  </template>
-                </v-file-input>
-              </v-col>
-            </v-row>
-            <v-row
-              justify="center"
-            >
-              <v-col
-                class="mt-0 pt-0"
-                cols="12"
-                align="center"
-                justify="center"
-              >
-                <span class="h1 text-uppercase font-weight-light">OR</span>
-              </v-col>
-              <v-col
-                cols="12"
-                align="center"
-                justify="center"
-              >
-                <v-btn
-                  outlined
-                  :disabled="loadingPrepare || loadingSampleFile"
-                  @click="getSampleFile"
-                >
-                  Use a sample file
-                </v-btn>
-              </v-col>
-            </v-row>
-          </v-stepper-content>
-
-          <v-stepper-content
-            class="my-2 py-2 mx-1 px-1"
-            step="2"
-          >
-            <v-row
-              cols="12"
               justify="center"
             >
               <v-col
                 xs="12"
                 sm="12"
-                md="10"
-                lg="10"
+                md="8"
+                lg="8"
                 xl="8"
               >
-                <v-row cols="12">
-                  <v-col
-                    align="left"
-                    xs="12"
-                    sm="6"
-                    md="6"
-                    lg="6"
-                    xl="6"
+                <v-stepper-header>
+                  <v-stepper-step
+                    :complete="maxEditableStep > 1"
+                    :editable="maxEditableStep >= 1"
+                    edit-icon="$complete"
+                    step="1"
+                    @click="step = 1"
                   >
-                    <small>Date column</small>
-                    <v-tooltip
-                      v-if="dateColValueHint"
-                      top
-                    >
-                      <template #activator="{ on, attrs }">
-                        <v-icon
-                          class="ml-1"
-                          color="warning"
-                          dark
-                          small
-                          v-bind="attrs"
-                          v-on="on"
-                        >
-                          mdi-information-outline
-                        </v-icon>
-                      </template>
-                      <span>{{ dateColValueHint }}</span>
-                    </v-tooltip>
-                    <v-chip-group
-                      v-model="selectedDateColValue"
-                      active-class="primary--text"
-                      mandatory
-                    >
-                      <v-chip
-                        v-for="(col, i) in dateColValueOptions"
-                        :key="i"
-                        :value="col"
-                        outlined
-                      >
-                        {{ col }}
-                      </v-chip>
-                    </v-chip-group>
-                  </v-col>
-                  <v-col
-                    align="left"
-                    xs="12"
-                    sm="6"
-                    md="6"
-                    lg="6"
-                    xl="6"
+                    Data
+                  </v-stepper-step>
+                  <v-divider />
+                  <v-stepper-step
+                    :complete="maxEditableStep > 2"
+                    :editable="maxEditableStep >= 2"
+                    edit-icon="$complete"
+                    step="2"
                   >
-                    <small>Date frequency</small>
-                    <v-tooltip
-                      v-if="freqHint"
-                      top
-                    >
-                      <template #activator="{ on, attrs }">
-                        <v-icon
-                          class="ml-1"
-                          color="warning"
-                          dark
-                          small
-                          v-bind="attrs"
-                          v-on="on"
-                        >
-                          mdi-information-outline
-                        </v-icon>
-                      </template>
-                      <span>{{ freqHint }}</span>
-                    </v-tooltip>
-                    <v-select
-                      v-model="selectedDateCol.freq"
-                      :items="freqOptions"
-                      class="mt-0 pt-1"
-                      single-line
-                    />
-                  </v-col>
-                </v-row>
-                <v-row
-                  class="my-0 py-0"
-                  cols="12"
-                >
-                  <v-col
-                    align="left"
-                    xs="12"
-                    sm="6"
-                    md="6"
-                    lg="6"
-                    xl="6"
+                    Parameters
+                  </v-stepper-step>
+                  <v-divider />
+                  <v-stepper-step
+                    :complete="maxEditableStep > 3"
+                    :editable="maxEditableStep >= 3"
+                    edit-icon="$complete"
+                    step="3"
                   >
-                    <small>Forecast column</small>
-                    <v-chip-group
-                      v-model="selectedForecastColValue"
-                      active-class="primary--text"
-                      mandatory
-                    >
-                      <v-chip
-                        v-for="(col, i) in forecastColValueOptions"
-                        :key="i"
-                        :value="col"
-                        outlined
-                      >
-                        {{ col }}
-                      </v-chip>
-                    </v-chip-group>
-                  </v-col>
-                  <v-col
-                    align="left"
-                    xs="12"
-                    sm="6"
-                    md="6"
-                    lg="6"
-                    xl="6"
-                  >
-                    <small>Horizon</small>
-                    <v-slider
-                      v-model="horizon"
-                      :disabled="!readyToForecast"
-                      min="1"
-                      max="48"
-                      :thumb-size="24"
-                      thumb-label="always"
-                      class="mt-1 pt-1"
-                    />
-                  </v-col>
-                </v-row>
-                <v-row class="my-0 py-0">
-                  <v-col
-                    align="right"
-                  >
-                    <v-tooltip
-                      top
-                    >
-                      <template #activator="{ on, attrs }">
-                        <v-btn
-                          v-bind="attrs"
-                          :disabled="!readyToForecast"
-                          :loading="loadingForecast"
-                          outlined
-                          v-on="on"
-                          @click="getForecast"
-                        >
-                          <v-icon left>
-                            mdi-chart-line-variant
-                          </v-icon>
-                          Forecast
-                        </v-btn>
-                      </template>
-                      <span>
-                        <small>Will forecast "{{ selectedForecastColValue }}" {{ horizon }} {{ selectedFreq.saying }} ahead {{ selectedDateColValue === '(auto)' ? 'by creating an integer index for dates' : 'with "' + selectedDateColValue + '" as date' }}</small>
-                      </span>
-                    </v-tooltip>
-                  </v-col>
-                </v-row>
+                    Forecast
+                  </v-stepper-step>
+                </v-stepper-header>
               </v-col>
             </v-row>
-          </v-stepper-content>
 
-          <v-stepper-content
-            class="my-2 py-2 mx-0 px-0"
-            step="3"
-          >
-            <div id="chart">
-              <ApexChart
-                :options="chartOptions"
-                :series="forecast.series"
-              />
-            </div>
-          </v-stepper-content>
-        </v-stepper>
-      </v-container>
+            <v-stepper-content
+              class="my-2 py-2"
+              step="1"
+            >
+              <v-row
+                justify="center"
+                cols="12"
+              >
+                <v-col
+                  xs="12"
+                  sm="12"
+                  md="8"
+                  lg="8"
+                  xl="8"
+                  align="center"
+                  class="pb-1"
+                >
+                  <v-file-input
+                    v-model="file"
+                    prepend-icon=""
+                    :loading="loadingPrepare || loadingSampleFile"
+                    accept=".csv,.xls,.xlsx"
+                    label="Select Excel or CSV file..."
+                    width="100%"
+                  >
+                    <template #prepend-inner>
+                      <v-icon
+                        left
+                        color="green darken-2"
+                      >
+                        mdi-file-excel-box
+                      </v-icon>
+                    </template>
+                    <template #append>
+                      <v-tooltip
+                        open-on-click
+                        :open-on-hover="false"
+                        transition="slide-x-reverse-transition"
+                        max-width="600"
+                        close-delay="200"
+                        nudge-right="10"
+                        left
+                      >
+                        <template #activator="{ on, attrs }">
+                          <v-icon
+                            v-bind="attrs"
+                            v-on="on"
+                          >
+                            mdi-information-outline
+                          </v-icon>
+                        </template>
+                        <span>
+                          Provide an Excel or CSV file that will be used for forecasting:
+                          <br>
+                          <li>
+                            The first row should contain headers
+                          </li>
+                          <li>
+                            At least one datetime column, preferrably with consistent frequency
+                          </li>
+                          <li>
+                            At least one numeric column
+                          </li>
+                          <li>
+                            Maximum number of rows is 366
+                          </li>
+                          <v-btn
+                            class="mt-4 mb-1"
+                            small
+                            outlined
+                            color="secondary"
+                            @click="getSampleFile(downloadOnly = true)"
+                          >
+                            <v-icon
+                              left
+                              color="white"
+                            >
+                              mdi-download
+                            </v-icon>
+                            Download example
+                          </v-btn>
+                        </span>
+                      </v-tooltip>
+                    </template>
+                  </v-file-input>
+                </v-col>
+                <v-col
+                  cols="12"
+                  align="center"
+                  class="pt-0"
+                >
+                  <div class="h1 text-uppercase font-weight-light">
+                    OR
+                  </div>
+                </v-col>
+                <v-col
+                  xs="12"
+                  sm="12"
+                  md="8"
+                  lg="8"
+                  xl="8"
+                  align="center"
+                >
+                  <v-btn
+                    width="100%"
+                    outlined
+                    :disabled="loadingPrepare || loadingSampleFile"
+                    @click="getSampleFile(downloadOnly = false)"
+                  >
+                    Use a sample file
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-stepper-content>
+
+            <v-stepper-content
+              class="my-2 py-2"
+              step="2"
+            >
+              <v-row
+                cols="12"
+                justify="center"
+              >
+                <v-col
+                  xs="12"
+                  sm="12"
+                  md="8"
+                  lg="8"
+                  xl="8"
+                >
+                  <v-row cols="12">
+                    <v-col
+                      align="left"
+                      xs="12"
+                      sm="12"
+                      md="12"
+                      lg="12"
+                      xl="12"
+                    >
+                      <small>Date column</small>
+                      <v-tooltip
+                        v-if="dateColValueHint"
+                        max-width="600"
+                        top
+                      >
+                        <template #activator="{ on, attrs }">
+                          <v-icon
+                            class="ml-1"
+                            color="warning"
+                            dark
+                            small
+                            v-bind="attrs"
+                            v-on="on"
+                          >
+                            mdi-information-outline
+                          </v-icon>
+                        </template>
+                        <span>{{ dateColValueHint }}</span>
+                      </v-tooltip>
+                      <v-chip-group
+                        v-model="selectedDateColValue"
+                        mandatory
+                      >
+                        <v-chip
+                          v-for="(col, i) in dateColValueOptions"
+                          :key="i"
+                          :value="col"
+                          :text-color="col === selectedDateColValue ? 'white' : undefined"
+                          :style="{
+                            'background-color': col === selectedDateColValue ? '#212121' : undefined,
+                          }"
+                        >
+                          {{ col }}
+                        </v-chip>
+                      </v-chip-group>
+                    </v-col>
+                    <v-col
+                      align="left"
+                      xs="12"
+                      sm="12"
+                      md="12"
+                      lg="12"
+                      xl="12"
+                    >
+                      <small>Date frequency</small>
+                      <v-tooltip
+                        v-if="freqHint"
+                        max-width="600"
+                        top
+                      >
+                        <template #activator="{ on, attrs }">
+                          <v-icon
+                            class="ml-1"
+                            color="warning"
+                            dark
+                            small
+                            v-bind="attrs"
+                            v-on="on"
+                          >
+                            mdi-information-outline
+                          </v-icon>
+                        </template>
+                        <span>{{ freqHint }}</span>
+                      </v-tooltip>
+                      <v-chip-group
+                        v-model="selectedDateCol.freq"
+                        mandatory
+                      >
+                        <v-chip
+                          v-for="(freq, i) in freqOptions"
+                          :key="i"
+                          :value="freq.value"
+                          :text-color="freq === selectedFreq ? 'white' : undefined"
+                          :style="{
+                            'background-color': freq === selectedFreq ? '#212121' : undefined,
+                          }"
+                        >
+                          {{ freq.text }}
+                        </v-chip>
+                      </v-chip-group>
+                    </v-col>
+                  </v-row>
+                  <v-row
+                    class="my-0 py-0"
+                    cols="12"
+                  >
+                    <v-col
+                      align="left"
+                      xs="12"
+                      sm="12"
+                      md="12"
+                      lg="12"
+                      xl="12"
+                    >
+                      <small>Forecast column</small>
+                      <v-chip-group
+                        v-model="selectedForecastColValue"
+                        mandatory
+                      >
+                        <v-chip
+                          v-for="(col, i) in forecastColValueOptions"
+                          :key="i"
+                          :value="col"
+                          :text-color="selectedForecastColValue === col ? 'white' : undefined"
+                          :style="{
+                            'background-color': selectedForecastColValue === col ? '#212121' : undefined,
+                          }"
+                        >
+                          {{ col }}
+                        </v-chip>
+                      </v-chip-group>
+                    </v-col>
+                    <v-col
+                      align="left"
+                      xs="12"
+                      sm="12"
+                      md="12"
+                      lg="12"
+                      xl="12"
+                    >
+                      <small>Horizon</small>
+                      <v-slider
+                        v-model="horizon"
+                        :disabled="!readyToForecast"
+                        min="1"
+                        max="48"
+                        :thumb-size="24"
+                        thumb-label="always"
+                        class="mt-1 pt-1"
+                      />
+                    </v-col>
+                  </v-row>
+                  <v-row class="my-0 py-0">
+                    <v-col
+                      align="center"
+                    >
+                      <v-tooltip
+                        top
+                      >
+                        <template #activator="{ on, attrs }">
+                          <v-btn
+                            width="100%"
+                            v-bind="attrs"
+                            :disabled="!readyToForecast"
+                            :loading="loadingForecast"
+                            outlined
+                            v-on="on"
+                            @click="getForecast"
+                          >
+                            <v-icon left>
+                              mdi-chart-line-variant
+                            </v-icon>
+                            Forecast
+                          </v-btn>
+                        </template>
+                        <span>
+                          <small>Will forecast "{{ selectedForecastColValue }}" {{ horizon }} {{ selectedFreq.saying }} ahead {{ selectedDateColValue === '(auto)' ? 'by creating an integer index for dates' : 'with "' + selectedDateColValue + '" as date' }}</small>
+                        </span>
+                      </v-tooltip>
+                    </v-col>
+                  </v-row>
+                </v-col>
+              </v-row>
+            </v-stepper-content>
+
+            <v-stepper-content
+              class="my-2 py-2 px-1 mx-0"
+              step="3"
+            >
+              <div id="chart">
+                <ApexChart
+                  :options="chartOptions"
+                  :series="forecast.series"
+                />
+              </div>
+            </v-stepper-content>
+          </v-stepper>
+        </v-container>
+      </v-card>
     </template>
   </DemoProjectTemplate>
 </template>
 
 <script>
+import { saveAs } from 'file-saver'
 import { mapActions } from 'vuex'
 import DemoProjectTemplate from '@/components/DemoProjects/DemoProjectTemplate'
 export default {
@@ -392,28 +510,29 @@ export default {
     readyToForecast () {
       return this.file && this.columns.length > 0 && this.selectedDateColValue && this.selectedForecastColValue && this.dateColValueOptions.includes(this.selectedDateColValue) && this.forecastColValueOptions.includes(this.selectedForecastColValue)
     },
+    chartHeight () {
+      const heights = {
+        xs: 350,
+        sm: 420,
+        md: 420,
+        lg: 450,
+        xl: 500
+      }
+      return heights[this.$vuetify.breakpoint.name]
+    },
     chartOptions () {
       return {
+        colors: ['#212121', '#303F9F', '#E53935', '#E53935'],
         chart: {
           type: 'line',
           stacked: false,
-          height: this.$vuetify.breakpoint.lgAndUp ? 500 : 350,
+          height: this.chartHeight,
           zoom: {
             type: 'x',
             enabled: true,
             autoScaleYaxis: true
           },
           toolbar: {
-            autoSelected: 'pan',
-            tools: {
-              download: true,
-              selection: true,
-              zoom: true,
-              zoomin: true,
-              zoomout: true,
-              pan: true,
-              reset: true
-            },
             export: {
               csv: {
                 filename: 'jmyrberg-forecaster-' + this.selectedForecastColValue,
@@ -447,7 +566,7 @@ export default {
         },
         title: {
           text: 'Forecast for "' + this.selectedForecastColValue + '"',
-          align: 'left'
+          align: this.$vuetify.breakpoint.xs ? 'left' : 'center'
         },
         yaxis: {
           show: true,
@@ -534,14 +653,19 @@ export default {
   mounted () {
   },
   methods: {
-    getSampleFile () {
+    getSampleFile (downloadOnly = false) {
       const formData = new FormData()
       formData.append('mode', 'sampleFile')
       this.loadingSampleFile = true
       return this.$api.post('/forecaster', formData)
         .then(resp => {
           const data = resp.data.data
-          this.file = this.b64ExcelToFile(data.excel, 'sample-data.xlsx')
+          const file = this.b64ExcelToFile(data.excel, 'sample-data.xlsx')
+          if (downloadOnly) {
+            saveAs(file, 'sample-data.xlsx')
+          } else {
+            this.file = file
+          }
           this.loadingSampleFile = false
         }).catch(err => {
           this.loadingSampleFile = false
@@ -640,5 +764,8 @@ export default {
 <style scoped>
   .v-stepper__header {
     box-shadow: none;
+  }
+  .v-tooltip__content {
+    pointer-events: initial;
   }
 </style>
