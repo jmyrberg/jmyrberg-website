@@ -7,7 +7,8 @@
     "build": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service build --mode=production",
     "lint": "vue-cli-service lint",
     "deploy": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service build --mode=production && cd dist && gsutil -m cp -z js,map,css,html,svg,json -r ./ gs://jmyrberg.com && cd .. && gsutil web set -m index.html -e 404.html gs://jmyrberg.com",
-    "reset-index-cache": "gsutil setmeta -h \"Content-Type:text/html\" -h \"Cache-Control:no-cache, max-age=0, no-transform\" gs://jmyrberg/index.html"
+    "reset-index-cache": "gsutil setmeta -h \"Content-Type:text/html\" -h \"Cache-Control:no-cache, max-age=0, no-transform\" gs://jmyrberg/index.html",
+    "sitemap": "vue-cli-service sitemap"
   },
   "dependencies": {
     "apexcharts": "^3.35.5",
@@ -39,10 +40,12 @@
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.0",
     "eslint-plugin-vue": "^9.5.1",
+    "esm": "^3.2.25",
     "lint-staged": "^13.0.3",
     "sass": "~1.32.13",
     "sass-loader": "^8.0.0",
     "vue-cli-plugin-compression": "~1.2.0",
+    "vue-cli-plugin-sitemap": "~2.3.0",
     "vue-cli-plugin-vuetify": "^2.5.8",
     "vue-cli-plugin-webpack-bundle-analyzer": "~4.0.0",
     "vue-template-compiler": "^2.7.10",
