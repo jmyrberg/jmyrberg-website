@@ -1,32 +1,11 @@
 """Module for forecaster.
 
-Target: Keep it as simple and as fast as possible
-
-Minimum inputs:
-- Data contents
-- Identify date column
-- Identify frequency
-- Identify numeric column (take first in first phase)
-
-Forecasting steps:
-1) User inputs an Excel or CSV file (UI)
-2) Send content straight away to API `check_inputs`
-    A): Try parse automatically and everything OK
-        => respond to UI with "Configuration OK"
-        => 
-    B): Try parse automatically and fail / warnings
-        => respond with noticed errors, ask user to provide inputs
-3 A) Show "forecasting" view in UI
-3 B) Show "configuration view" in UI and send data with given configuration
-4)
-
 TODO:
-- Warnings
-    - File size limit
-    - Number of rows limit
+- Add meta tags
+  https://search.google.com/search-console/sitemaps?resource_id=sc-domain%3Ajmyrberg.com
+  https://github.com/cheap-glitch/vue-cli-plugin-sitemap#url-meta-tags
+  https://stackoverflow.com/questions/68460745/adding-a-sitemap-to-a-vuejs-application
 - Ad-hoc tokenization / recaptcha based on time and data etc.
-- xaxis label in wrong place?
-- Fine-tune all formatting and responsiveness
 """
 
 
@@ -38,6 +17,7 @@ import os
 import traceback
 
 import numpy as np
+import pandas as pd
 
 from flask import jsonify
 from itsdangerous import Signer
@@ -45,7 +25,8 @@ from itsdangerous import Signer
 from statsforecast import StatsForecast
 from statsforecast.models import AutoARIMA
 
-from utils import *
+from utils import convert_date_cols, convert_num_cols, find_freqs, read_file, \
+    humanize_dtype
 
 
 def request_wrapper(original_func=None,
@@ -115,7 +96,13 @@ def request_wrapper(original_func=None,
 
 @request_wrapper(allowed_methods=['OPTIONS', 'POST'])
 def forecaster(request):
-    """TODO"""
+    """Perform forecasting.
+    
+    Three modes provided in request.form['mode']:
+        sampleFile: Return sample file as base64 encoded Excel file.
+        prepare: Prepare / examine file that user gave as an input.
+        forecast: Perform forecasting based on a given file and parameters.
+    """
     mode = request.form['mode']
     data = {}
 
@@ -137,15 +124,22 @@ def forecaster(request):
     # Read inputs as df
     file = request.files['inputFile']
     filename = file.filename
-    df = read_file(file, filename)
+    try:
+        df = read_file(file, filename)
+    except:
+        raise ValueError('Please check the input data format')
+
+    if len(df) > 366:
+        raise ValueError('Maximum number of rows 366 exceeded')
 
     if mode == 'prepare':
-        # Find date and numeric column
+        print('Find date and numeric column...')
         df = convert_date_cols(df)
         freqs = find_freqs(df)
         df = convert_num_cols(df)
 
         # Format results
+        print('Formatting results...')
         cols = [{
             'value': col,
             'dtype': dt.name,
@@ -155,8 +149,9 @@ def forecaster(request):
         data['columns'] = cols
 
         return {'status': 'success',
-                'message': 'Solution obtained successfully!',
+                'message': 'Preparation done successfully!',
                 'data': data}, 200
+
     elif mode == 'forecast':
         print('Parsing input data...')
         params = json.loads(request.files['params'].read())
@@ -183,6 +178,7 @@ def forecaster(request):
 
         # Forecast
         print('Forecasting...')
+        # TODO: More complex logic / "preference slider"
         models = [AutoARIMA()]
         model = StatsForecast(df=df,  models=models, freq=freq)
         yhat = (
@@ -204,8 +200,7 @@ def forecaster(request):
             .reset_index(drop=True)
         )
 
-        # Format results with history
-        print('Formatting...')
+        print('Formatting results...')
         dates = json.loads(
             res[date_col].to_json(orient='values', date_format='iso'))
         series = [
