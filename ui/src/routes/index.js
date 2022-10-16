@@ -1,3 +1,5 @@
+import store from '../store/index.js'
+
 const Home = () => import(/* webpackChunkName: "home" */ '../views/Home.vue')
 const Forecaster = () => import(/* webpackChunkName: "forecaster" */ '../views/DemoProjects/Forecaster.vue')
 const MaximumFlows = () => import(/* webpackChunkName: "maximum-flows" */ '../views/DemoProjects/MaximumFlows.vue')
@@ -83,6 +85,17 @@ export const routes = [
         priority: 0.5,
         changefreq: 'monthly'
       }
+    }
+  },
+  {
+    path: '/:catchAll(.*)',
+    beforeEnter: (to, from, next) => {
+      store.dispatch('showMessage', {
+        message: `Sorry, page "${to.path}" doesn't exist`,
+        color: 'warning',
+        delay: -1
+      })
+      next({ name: 'home' })
     }
   }
 ]
