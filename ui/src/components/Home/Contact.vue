@@ -50,14 +50,24 @@
           <v-textarea
             v-model="message"
             color="primary"
-            outlined
+            :rules="messageRules"
             label="Message"
             required
+            outlined
           />
+          <v-slide-y-transition>
+            <vue-recaptcha
+              v-show="showReCaptcha"
+              class="pb-2 mb-4"
+              theme="dark"
+              :sitekey="reCaptchaSiteKey"
+              @verify="onReCaptchaVerify"
+            />
+          </v-slide-y-transition>
           <div v-if="!submitError && !submitSuccess">
             <v-btn
               :loading="submitting"
-              :disabled="!valid"
+              :disabled="(!valid || !!!reCaptchaResponse)"
               outlined
               color="primary"
               @click="submit"
@@ -93,25 +103,43 @@
 </template>
 
 <script>
+import { VueRecaptcha } from 'vue-recaptcha'
 export default {
   name: 'Contact',
+  components: { VueRecaptcha },
   data: () => ({
-    valid: true,
+    valid: false,
     name: '',
     nameRules: [
       v => !!v || 'Please fill in your name'
     ],
     email: '',
     emailRules: [
-      v => !!v || 'Please fill in your E-mail address',
+      v => !!v || 'Please fill in a valid E-mail address',
       v => /.+@.+\..+/.test(v) || 'Please fill in a valid E-mail address'
     ],
     message: '',
+    messageRules: [
+      v => v.length > 0 || 'Please write a proper message'
+    ],
     submitting: false,
     submitSuccess: false,
-    submitError: false
+    submitError: false,
+    reCaptchaSiteKey: process.env.VUE_APP_RECAPTCHA_SITE_KEY,
+    reCaptchaResponse: ''
   }),
+  computed: {
+    showReCaptcha () {
+      const formValid = (!!this.name && !!this.message && !!this.email)
+      const reCaptchaResponseExists = !!this.reCaptchaResponse
+      const submitNotDone = !this.submitSuccess
+      return submitNotDone && (reCaptchaResponseExists || formValid)
+    }
+  },
   methods: {
+    onReCaptchaVerify (verify) {
+      this.reCaptchaResponse = verify
+    },
     submit () {
       if (this.$refs.form.validate()) {
         this.submitting = true
@@ -119,11 +147,11 @@ export default {
           data: {
             name: this.name,
             email: this.email,
-            message: this.message
+            message: this.message,
+            reCaptchaResponse: this.reCaptchaResponse
           }
         }).then(resp => {
           this.submitSuccess = true
-          this.submitted = true
         }).catch(err => {
           console.log(err)
           this.submitError = true
