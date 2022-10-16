@@ -3,6 +3,7 @@
 
 import functools
 import os
+import requests
 import smtplib
 
 from flask import jsonify
@@ -79,7 +80,22 @@ def contact(request):
     print('Starting to send contact email...')
     
     data = request.get_json()['data']
-    
+
+    # ReCaptcha check
+    print('Verifying reCaptcha...')
+    recaptcha_success = requests.post(
+        'https://www.google.com/recaptcha/api/siteverify',
+        data={
+            'secret': os.environ['RECAPTCHA_SECRET_KEY'],
+            'response': data['reCaptchaResponse']
+        }
+    ).json()['success']
+    if not recaptcha_success:
+        raise ValueError('reCaptcha validation failed, please reload the page')
+    else:
+        print('reCaptcha response verified successfully!')
+
+    # Mail
     _from = os.environ['MAIL_USERNAME']
     to = os.environ['MAIL_TO']
     subject = f"Message from {data['name']} (jmyrberg-website)"
