@@ -31,6 +31,7 @@ Vue.prototype.$api = api
 // Router
 Vue.use(VueRouter)
 const router = new VueRouter({
+  mode: 'history',
   routes,
   scrollBehavior (to, from, savedPosition) {
     return new Promise((resolve, reject) => {

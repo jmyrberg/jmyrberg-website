@@ -6,7 +6,7 @@
     "serve": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service serve --mode=local",
     "build": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service build --mode=production",
     "lint": "vue-cli-service lint",
-    "deploy": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service build --mode=production && cd dist && gsutil -m cp -z js,map,css,html,svg,json -r ./ gs://jmyrberg.com && cd .. && gsutil web set -m index.html -e 404.html gs://jmyrberg.com",
+    "deploy": "export NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service build --mode=production && cd dist && gsutil -m cp -z js,map,css,html,svg,json -r ./ gs://jmyrberg.com && cd .. && gsutil web set -m index.html -e index.html gs://jmyrberg.com",
     "reset-index-cache": "gsutil setmeta -h \"Content-Type:text/html\" -h \"Cache-Control:no-cache, max-age=0, no-transform\" gs://jmyrberg/index.html",
     "sitemap": "vue-cli-service sitemap"
   },
