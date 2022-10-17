@@ -1,16 +1,24 @@
 #!/bin/bash
 #
-# Steps: https://devopsdirective.com/posts/2020/10/gcs-cloudflare-hosting
-# 
-# Updated to use CloudFlare to avoid GCP load balancer costs
-# 
-# Cloudflare DNS:
+# Steps in CloudFlare:
+#
+# DNS:
 #     A: www          | 192.0.2.1
 # CNAME: jmyrberg.com | c.storage.googleapis.com
-# 
-# Cloudflare Page Rules:
+#
+# Page Rules:
 # www.jmyrberg.com/* -> https://jmyrberg.com/$1 / Forwarding URL / 301
 #
+# Service Worker:
+# Name: 404-to-200 / Compute setting: Global / Code in scripts/cloudflare-service-worker.js
+# 
+# Workers Routes:
+# Route: *jmyrberg.com/demo-projects/* / Service: 404-to-200 / Environment: production
+# 
+#
+# Steps in Google (link + commands below):
+# https://devopsdirective.com/posts/2020/10/gcs-cloudflare-hosting
+# 
 PROJECT_ID=jmyrberg-website
 WEBSITE_BUCKET_NAME=jmyrberg.com
 FOOD_RECOMMENDER_BUCKET_NAME=jmyrberg-food-recommender
