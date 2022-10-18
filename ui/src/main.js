@@ -5,17 +5,19 @@ import { routes } from './routes/index.js'
 import store from './store'
 import axios from 'axios'
 import vuetify from './plugins/vuetify'
-import VueKonva from 'vue-konva'
 import VueApexCharts from 'vue-apexcharts'
+import VueKonva from 'vue-konva'
+import VueMeta from 'vue-meta'
 
 const API_URL = process.env.VUE_APP_API_URL
 const API_KEY = process.env.VUE_APP_API_KEY
 
 Vue.config.productionTip = false
 
-Vue.use(VueKonva)
 Vue.use(VueApexCharts)
 Vue.component('ApexChart', VueApexCharts)
+Vue.use(VueKonva)
+Vue.use(VueMeta)
 
 Vue.prototype.$isTouchScreen = function () {
   return ('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)
