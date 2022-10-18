@@ -429,6 +429,13 @@ export default {
   components: {
     DemoProjectTemplate
   },
+  metaInfo: {
+    title: 'Forecaster | Jesse Myrberg',
+    titleTemplate: null,
+    meta: [
+      { vmid: 'description', name: 'description', content: 'Forecaster is a tool that allows you to create time series forecasts for your own datasets or the sample provided' }
+    ]
+  },
   data: () => ({
     step: 1,
     maxEditableStep: 0,

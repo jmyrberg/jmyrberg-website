@@ -341,6 +341,13 @@ export default {
   components: {
     DemoProjectTemplate
   },
+  metaInfo: {
+    title: 'Food recommender | Jesse Myrberg',
+    titleTemplate: null,
+    meta: [
+      { vmid: 'description', name: 'description', content: 'A tool that provides a shareable food recommendation list that stays relevant through user interactions' }
+    ]
+  },
   props: {
     id: { type: String, default: undefined }
   },

@@ -47,6 +47,21 @@ import Footer from '@/components/Footer'
 import Toolbar from '@/components/Toolbar'
 export default {
   name: 'App',
+  metaInfo () {
+    return {
+      title: 'Jesse Myrberg',
+      titleTemplate: '%s | Jesse Myrberg',
+      htmlAttrs: {
+        lang: 'en-US'
+      },
+      link: [{ rel: 'canonical', href: `${process.env.VUE_APP_PUBLIC_URL}${this.$route.path}` }],
+      meta: [
+        { charset: 'utf-8' },
+        { vmid: 'description', name: 'description', content: 'Jesse Myrberg\'s personal website with analytics demo projects and contact information' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' }
+      ]
+    }
+  },
   components: {
     Toolbar,
     Footer

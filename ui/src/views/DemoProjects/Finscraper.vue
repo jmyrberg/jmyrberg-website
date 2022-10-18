@@ -156,6 +156,13 @@ export default {
   components: {
     DemoProjectTemplate
   },
+  metaInfo: {
+    title: 'Finscraper | Jesse Myrberg',
+    titleTemplate: null,
+    meta: [
+      { vmid: 'description', name: 'description', content: 'This tool demonstrates the use of finscraper Python library for fetching content from popular Finnish websites, such as is.fi, il.fi or vauva.fi' }
+    ]
+  },
   data: () => ({
     spider: null,
     spiderOptions: [],

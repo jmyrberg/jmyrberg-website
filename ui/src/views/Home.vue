@@ -14,6 +14,10 @@ import Contact from '@/components/Home/Contact.vue'
 import DemoProjectList from '@/components/Home/DemoProjectList.vue'
 export default {
   name: 'Home',
+  metaInfo: {
+    title: 'Jesse Myrberg',
+    titleTemplate: null
+  },
   components: {
     About,
     Contact,

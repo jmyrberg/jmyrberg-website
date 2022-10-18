@@ -40,6 +40,7 @@
             >
               <v-img
                 :src="require('@/assets/jesse-myrberg-min.jpg')"
+                alt="Jesse Myrberg"
                 style="filter: grayscale(100%); border-radius: 4px;"
                 max-height="500"
               />

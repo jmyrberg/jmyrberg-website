@@ -111,6 +111,13 @@ export default {
   components: {
     DemoProjectTemplate
   },
+  metaInfo: {
+    title: 'Document Context Similarity | Jesse Myrberg',
+    titleTemplate: null,
+    meta: [
+      { vmid: 'description', name: 'description', content: 'Use the Finnish BERT model to find out how likely two Finnish documents are to occur in the same context' }
+    ]
+  },
   data: () => ({
     valid: true,
     doc1: '',

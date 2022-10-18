@@ -501,6 +501,13 @@ export default {
   components: {
     DemoProjectTemplate
   },
+  metaInfo: {
+    title: 'Maximum flows | Jesse Myrberg',
+    titleTemplate: null,
+    meta: [
+      { vmid: 'description', name: 'description', content: 'Tool that demonstrates a maximum flow problem, where the objective is to maximize the total flow from source to sink node with given flow capacities' }
+    ]
+  },
   data: () => ({
     breakpointDefaultScales: {
       xs: 0.7,
