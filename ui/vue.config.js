@@ -31,7 +31,7 @@ module.exports = {
       modes: [] // Done by GCP
     },
     sitemap: {
-      baseURL: 'https://jmyrberg.com',
+      baseURL: process.env.VUE_APP_PUBLIC_URL,
       defaults: {
         lastmod: '2022-10-12',
         changefreq: 'monthly',
@@ -40,6 +40,5 @@ module.exports = {
       routes
     }
   },
-  parallel: false,
-  publicPath: process.env.NODE_ENV === 'production' ? process.env.STATIC_HOST_PREFIX : '/'
+  parallel: false
 }
