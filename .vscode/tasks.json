@@ -26,7 +26,7 @@
         {
             "label": "Deploy - UI",
             "type": "shell",
-            "command": "source scripts/deploy-ui.sh",
+            "command": "source ~/.zshrc && source scripts/deploy-ui.sh",
         }
     ],
     "inputs": [
