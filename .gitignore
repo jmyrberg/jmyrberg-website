@@ -1,4 +1,6 @@
 # Custom
+*.ipynb
+.venv/
 .DS_Store
 data/
 ext/*
