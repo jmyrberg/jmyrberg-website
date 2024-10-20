@@ -1,63 +1,81 @@
-"""Module for fetching Nibe Uplink data."""
+'''Module for getting Nibe myUplink data.'''
 
 
-import functools
 import json
 import os
-import re
 import tempfile
 import time
-import traceback
-
-from pathlib import Path
-
-import bs4
 import requests
+
+from datetime import datetime
+from pathlib import Path
 
 from google.cloud.storage.client import Client
 
 
 HOME_DATA_BUCKET_NAME = os.environ['HOME_DATA_BUCKET_NAME']
+NIBE_CLIENT_ID = os.environ['NIBE_CLIENT_ID']
+NIBE_CLIENT_SECRET = os.environ['NIBE_CLIENT_SECRET']
+NIBE_DEVICE_ID = os.environ['NIBE_DEVICE_ID']
+NIBE_PARAMETER_IDS = [
+    '40004',  # Nykyi­nen ulkoläm­pötila (BT1)
+    '40008',  # Meno­johto (BT2)
+    '40012',  # Return line (BT3)
+    '40013',  # Käyttö­vesi yläosa (BT7)
+    '40014',  # Käyttö­vesi lataus (BT6)
+    '40020',  # Höy­rystin (BT16)
+    '40023',  # Kompres­sorin anturi (BT18)
+    '40024',  # Sähkö­vastus­anturi (BT19)
+    '40025',  # Poisto­ilma (BT20)
+    '40026',  # Ulos­puhal­lusilma (BT21)
+    '40033',  # Huone­lämpö­tila (BT50)
+    '40067',  # Keski­ulkoläm­pötila (BT1)
+    '40072',  # Virtaus­anturi (BF1)
+    '40075',  # Supply air (BT22)
+    '40079',  # Virta (BE3)
+    '40081',  # Virta (BE2)
+    '40083',  # Virta (BE1)
+    '42096',  # Supply air fan speed
+    '42770',  # Haluttu ilman­kosteus
+    '43009',  # Lasket­tu meno­lämpö­tila lämmi­tyksen alajako­piiri 1
+    '43066',  # Sulatus­aika
+    '43081',  # Aika­kerroin lisä­lämmön­lähde
+    '43108',  # Nykyi­nen puhalti­men tila
+    '43109',  # Nykyi­nen lämmin­vesitila
+    '43416',  # Kompr. käynnis­tyksiä
+    '43420',  # Käynti­aika
+    '43424',  # Käyttö­veden tuotanto­aika
+    '43427',  # Tila kompres­sori
+    '47015',  # lämmitysjärjestelmä
+    '50221',  # Exhaust air fan speed
+]
 
 storage_client = None
 
 
 class Nibe:
 
-    BASE_URL = 'https://www.nibeuplink.com'
-    
-    def __init__(self, email, password, hpid):
-        """Fetching data from Nibe Uplink."""
-        self.email = email
-        self.password = password
-        self.hpid = hpid
-        
-        self.sess = requests.Session()
-        
-        data = {'Email': self.email, 'Password': self.password}
-        self.sess.post(f'{self.BASE_URL}/LogIn', data)
-        
-    def get_previous_history_timestamp(self):
-        timestamp = None
-        if os.getenv('ENV', 'production') == 'local':
-            expected_path = (Path(tempfile.gettempdir())
-                             / HOME_DATA_BUCKET_NAME /
-                             'nibe/history/previous_timestamp.txt')
-            if expected_path.exists():
-                with open(expected_path, 'r') as f:
-                    timestamp = int(json.load(f)[0])
-        else:
-            global storage_client
-            if not storage_client:
-                storage_client = Client()
-            blob_name = 'nibe/history/previous_timestamp.txt'
-            blob = (storage_client.bucket(HOME_DATA_BUCKET_NAME)
-                    .get_blob(blob_name))
-            if blob:
-                timestamp = int(json.loads(blob.download_as_string())[0])
+    BASE_URL = 'https://api.myuplink.com'
 
-        return timestamp
-    
+    def __init__(self):
+        self.access_token = self.get_access_token()
+
+        self.sess = requests.Session()
+        self.sess.headers.update({
+            'Authorization': f'Bearer {self.access_token}',
+            'Accept-Language': 'fi-FI'
+        })
+
+    def get_access_token(self):
+        return requests.post(
+            f'{self.BASE_URL}/oauth/token',
+            auth=(NIBE_CLIENT_ID, NIBE_CLIENT_SECRET),
+            data={
+                'grant_type': 'client_credentials',
+                'scope': 'READSYSTEM'
+            }
+        ).json()['access_token']
+
     def save_json(self, data, blob_name):
         if os.getenv('ENV', 'production') == 'local':
             expected_path = (Path(tempfile.gettempdir())
@@ -65,7 +83,7 @@ class Nibe:
             expected_path.parent.mkdir(exist_ok=True, parents=True)
             with open(expected_path, 'w') as f:
                 data = json.dump(data, f)
-                print(f'Saved into {str(expected_path)}!')
+                print(f'Saved {len(data)} points into {str(expected_path)}!')
         else:
             global storage_client
             if not storage_client:
@@ -73,100 +91,36 @@ class Nibe:
             blob = storage_client.bucket(HOME_DATA_BUCKET_NAME).blob(blob_name)
             blob.upload_from_string(json.dumps(data),
                                     content_type='application/json')
-            print(f'Saved into {blob_name}!')
-        
-    def get_available_history_metrics(self):
-        page = self.sess.get(f'{self.BASE_URL}/System/{self.hpid}/History').text
-        btns = bs4.BeautifulSoup(page, 'html.parser').find_all('input')
-        metrics = [btn.attrs.get('id') for btn in btns
-                   if btn.attrs.get('id').isnumeric()]
-        return metrics
 
-    def get_metric_history(self, metric, start, end, resolution=1000):
-        data = {
-            'hpid': self.hpid,
-            'variableId': metric,
-            'startDate': start,
-            'stopDate': end,
-            'resolution': resolution
-        }
-        res = self.sess.post(f'{self.BASE_URL}/PrivateAPI/History', data).json()
+            print(f'Saved {len(data)} points into {blob_name}!')
 
-        return res
-    
-    def get_history(self):
-        end = int(time.time())
-        start = (self.get_previous_history_timestamp()
-                 or (end - 60 * 60 * 24 * 366))
-        start += 1
-        metrics = self.get_available_history_metrics()
-        
-        print(f'Fetching history from {start} to {end} for {metrics}...')
-        
-        data = []
-        for metric in metrics:
-            metric_dict = self.get_metric_history(metric, start, end)
-            for timestamp, value in metric_dict['data']:
-                timestamp = int(timestamp // 1000)
-                if (timestamp >= start) and (timestamp <= end):
-                    data.append({
-                        'metric': metric,
-                        'timestamp': timestamp,
-                        'value': value,
-                        'label': metric_dict['label'],
-                        'unit': metric_dict['unit']
-                    })
-        
-        if len(data) > 0:
-            self.save_json(data, f'nibe/history/{start}-{end}.json')
-            self.save_json([end], f'nibe/history/previous_timestamp.txt')
-        else:
-            print('Nothing to write :(')
 
-        return data
-    
-    def get_status(self):
-        timestamp = int(time.time())
-        
-        print(f'Fetching status for {timestamp}...')
-        
+    def get_points(self):
+        now_timestamp = int(time.time())
         resp = self.sess.get(
-            f'{self.BASE_URL}/System/{self.hpid}/Status/ServiceInfo')
-        soup = bs4.BeautifulSoup(resp.content, 'html.parser')
-        
-        data = []
-        for tr in soup.find_all('tr'):
-            try:
-                metric = tr.find('span', {'class': lambda x: 'ID' in x}).attrs['class'][1][2:]
-                label = re.sub(r'\s+', ' ', tr.find('td').text).strip()
-                value = tr.find('span', {'class': lambda x: 'AutoUpdate' in x}).text
-                data.append({
-                    'metric': metric,
-                    'timestamp': timestamp,
-                    'value': value,
-                    'label': label
-                })
-            except Exception as e:
-                pass
+            f'{self.BASE_URL}/v2/devices/{NIBE_DEVICE_ID}/points',
+            params={'parameters': ','.join(NIBE_PARAMETER_IDS)}
+        )
+        if not resp.ok:
+            raise ValueError(f'Response status code: {resp.status_code}')
 
-        if len(data) > 0:        
-            self.save_json(data, f'nibe/status/{timestamp}.json')
-        else:
-            print('Nothing to write :(')
+        points = [{
+            'metric': p['parameterId'],
+            'timestamp': int(datetime.fromisoformat(p['timestamp']).timestamp()),
+            'value': p['value']
+        } for p in resp.json()]
 
-        return data
+        assert len(points) > 0, 'Something wrong with the response :('
+    
+        self.save_json(points, blob_name=f'nibe/points/{now_timestamp}.json')
+
+        return points
 
 
 def get_nibe_data(data, context):
-    """Get status and history datasets from Nibe Uplink."""
-    nibe = Nibe(
-        email=os.environ['NIBE_EMAIL'],
-        password=os.environ['NIBE_PASSWORD'],
-        hpid=os.environ['NIBE_HPID']
-    )
-    status = nibe.get_status()
-    history = nibe.get_history()
-
+    '''Get points from Nibe myUplink.'''
+    nibe = Nibe()
+    data = nibe.get_points()
     return {'status': 'success',
             'message': 'Nibe data saved successfully',
-            'data': {'status': status, 'history': history}}, 200
+            'data': data}, 200
