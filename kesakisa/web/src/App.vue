@@ -111,10 +111,7 @@
           @end-task-now="endTaskNow"
         />
 
-        <section v-else class="section-block" aria-labelledby="saannot-heading">
-          <div class="ribbon">
-            <span id="saannot-heading">Säännöt</span>
-          </div>
+        <section v-else class="section-block" aria-label="Säännöt">
           <ol class="rules-list">
             <li v-for="rule in rules" :key="rule">{{ rule }}</li>
           </ol>
@@ -151,7 +148,7 @@
         <span class="bottom-nav__icon">
           <img :src="tab.icon" alt="" />
         </span>
-        {{ tab.label }}
+        <span class="bottom-nav__label">{{ tab.label }}</span>
       </button>
     </nav>
   </div>

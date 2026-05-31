@@ -1,9 +1,5 @@
 <template>
-  <section class="section-block home-panel" aria-labelledby="etusivu-heading">
-    <div class="ribbon">
-      <span id="etusivu-heading">Etusivu</span>
-    </div>
-
+  <section class="section-block home-panel" aria-label="Etusivu">
     <div class="home-stack">
       <article class="home-card home-card--task">
         <span class="home-card__title">Päivätehtävä</span>
@@ -43,7 +39,7 @@
           </span>
           <span>
             <small>Aika</small>
-            <strong>{{ formatTime(task.startsAt) }}-{{ formatTime(task.endsAt) }}</strong>
+            <strong>{{ formatTime(task.startsAt) }} - {{ formatTime(task.endsAt) }}</strong>
           </span>
         </span>
       </article>

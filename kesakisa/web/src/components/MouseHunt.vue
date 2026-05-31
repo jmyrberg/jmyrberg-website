@@ -1,11 +1,5 @@
 <template>
-  <section class="section-block" aria-labelledby="hiiret-heading">
-    <div class="ribbon">
-      <span id="hiiret-heading">Hiiret</span>
-    </div>
-
-    <p class="section-summary">{{ mouseSummary }}</p>
-
+  <section class="section-block" aria-label="Hiiret">
     <div class="mouse-den">
       <article
         v-for="mouse in mice"
@@ -13,7 +7,10 @@
         class="mouse-card"
         :class="{
           'mouse-card--found': foundByMouse[mouse.id],
-          'mouse-card--shake': shakingMouseId === mouse.id
+          'mouse-card--shake': shakingMouseId === mouse.id,
+          'mouse-card--flipped': flippedMouseId === mouse.id,
+          'mouse-card--returning': returningMouseId === mouse.id,
+          'mouse-card--resetting': resettingMouseId === mouse.id
         }"
       >
         <button
@@ -114,15 +111,30 @@ const foundByMouse = computed(() => {
   }, {})
 })
 
-const hiddenMouseCount = computed(() => mice.length - props.foundMice.length)
-const mouseSummary = computed(() => hiddenMouseCount.value > 0 ? 'Hiiriä on piilossa' : 'Kaikki hiiret on löydetty')
 const shakingMouseId = ref<MouseId | null>(null)
+const flippedMouseId = ref<MouseId | null>(null)
+const returningMouseId = ref<MouseId | null>(null)
+const resettingMouseId = ref<MouseId | null>(null)
 const expandedTipMouseIds = ref<MouseId[]>([])
+const mouseShakeMs = 1000
+const foundMouseFlipMs = mouseShakeMs / 2
+const mouseResetMs = 40
 let shakeTimeout: number | undefined
+let flipTimeout: number | undefined
+let resetTimeout: number | undefined
+let mouseAnimationRun = 0
 
 onBeforeUnmount(() => {
   if (shakeTimeout) {
     window.clearTimeout(shakeTimeout)
+  }
+
+  if (flipTimeout) {
+    window.clearTimeout(flipTimeout)
+  }
+
+  if (resetTimeout) {
+    window.clearTimeout(resetTimeout)
   }
 })
 
@@ -150,23 +162,97 @@ function toggleTips (mouseId: MouseId): void {
   }
 }
 
-function vibrateMouse (mouseId: MouseId): void {
-  if (shakeTimeout) {
-    window.clearTimeout(shakeTimeout)
-  }
-
-  shakingMouseId.value = null
-  window.requestAnimationFrame(() => {
-    shakingMouseId.value = mouseId
-  })
-
+function triggerHaptics (): void {
   if ('vibrate' in navigator) {
     const haptics = navigator as Navigator & { vibrate: (pattern: number | number[]) => boolean }
     haptics.vibrate([45, 35, 45, 35, 45, 35, 45, 35, 45, 35, 45, 35, 45, 35, 45, 35, 45, 35, 45, 35, 45, 35, 45])
   }
+}
+
+function startMouseShake (mouseId: MouseId, animationRun: number, afterShake?: () => void): void {
+  window.requestAnimationFrame(() => {
+    if (animationRun !== mouseAnimationRun) {
+      return
+    }
+
+    shakingMouseId.value = mouseId
+    triggerHaptics()
+  })
 
   shakeTimeout = window.setTimeout(() => {
+    if (animationRun !== mouseAnimationRun) {
+      return
+    }
+
     shakingMouseId.value = null
-  }, 1000)
+    shakeTimeout = undefined
+    afterShake?.()
+  }, mouseShakeMs)
+}
+
+function vibrateMouse (mouseId: MouseId): void {
+  const animationRun = mouseAnimationRun + 1
+  mouseAnimationRun = animationRun
+
+  if (shakeTimeout) {
+    window.clearTimeout(shakeTimeout)
+  }
+
+  if (flipTimeout) {
+    window.clearTimeout(flipTimeout)
+  }
+
+  if (resetTimeout) {
+    window.clearTimeout(resetTimeout)
+  }
+
+  shakingMouseId.value = null
+  const shouldFlip = !!foundByMouse.value[mouseId]
+  flippedMouseId.value = null
+  returningMouseId.value = null
+  resettingMouseId.value = null
+
+  if (!shouldFlip) {
+    startMouseShake(mouseId, animationRun)
+    return
+  }
+
+  flippedMouseId.value = mouseId
+
+  flipTimeout = window.setTimeout(() => {
+    if (animationRun !== mouseAnimationRun) {
+      return
+    }
+
+    startMouseShake(mouseId, animationRun, () => {
+      window.requestAnimationFrame(() => {
+        if (animationRun !== mouseAnimationRun) {
+          return
+        }
+
+        returningMouseId.value = mouseId
+
+        flipTimeout = window.setTimeout(() => {
+          if (animationRun !== mouseAnimationRun) {
+            return
+          }
+
+          resettingMouseId.value = mouseId
+          flippedMouseId.value = null
+          returningMouseId.value = null
+          flipTimeout = undefined
+
+          resetTimeout = window.setTimeout(() => {
+            if (animationRun !== mouseAnimationRun) {
+              return
+            }
+
+            resettingMouseId.value = null
+            resetTimeout = undefined
+          }, mouseResetMs)
+        }, foundMouseFlipMs)
+      })
+    })
+  }, foundMouseFlipMs)
 }
 </script>

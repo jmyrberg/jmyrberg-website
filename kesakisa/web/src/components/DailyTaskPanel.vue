@@ -1,55 +1,50 @@
 <template>
-  <section class="section-block task-panel" aria-labelledby="tehtava-heading">
-    <div class="ribbon">
-      <span id="tehtava-heading">Päivätehtävä</span>
-    </div>
-
-    <section class="task-panel__section task-panel__section--status" aria-label="Päivätehtävän tilanne">
-      <p class="section-summary task-panel__summary">{{ statusSummary }}</p>
-
-      <CountdownTimer
-        v-if="status !== 'ended'"
-        class="task-panel__countdown"
-        :target-at="targetAt"
-        :label="countdownLabel"
-        :finished-label="finishedLabel"
-        :as-button="false"
-        :show-label="false"
-      />
-    </section>
-
-    <section class="task-panel__section" aria-labelledby="tehtava-aika-paikka-heading">
-      <h2 id="tehtava-aika-paikka-heading" class="task-panel__subtitle">{{ taskMetaHeading }}</h2>
+  <section class="section-block task-panel" aria-label="Päivätehtävä">
+    <section class="task-panel__section" aria-label="Tehtävän aika ja paikka">
       <div class="task-panel__meta">
+        <strong class="task-panel__box-title">{{ taskMetaHeading }}</strong>
         <div>
           <small>Paikka</small>
           <strong>{{ task.location }}</strong>
         </div>
         <div>
           <small>Aika</small>
-          <strong>{{ formatTime(task.startsAt) }}-{{ formatTime(task.endsAt) }}</strong>
+          <strong>{{ formatTime(task.startsAt) }} - {{ formatTime(task.endsAt) }}</strong>
+        </div>
+        <div v-if="status !== 'ended'" class="task-panel__time-left">
+          <small>{{ timeLeftLabel }}</small>
+          <CountdownTimer
+            class="task-panel__countdown"
+            :target-at="targetAt"
+            :label="countdownLabel"
+            :finished-label="finishedLabel"
+            :as-button="false"
+            :show-label="false"
+          />
         </div>
       </div>
     </section>
 
-    <section class="task-panel__section" aria-labelledby="tehtava-valmistautuminen-heading">
-      <h2 id="tehtava-valmistautuminen-heading" class="task-panel__subtitle">Valmistautuminen</h2>
+    <section v-if="status !== 'live'" class="task-panel__section" aria-label="Valmistautuminen">
       <div class="task-panel__prep">
+        <strong class="task-panel__box-title">Valmistautuminen</strong>
         <span>{{ task.preparationText }}</span>
       </div>
     </section>
 
-    <section class="task-panel__section" aria-labelledby="tehtava-ohjeet-heading">
-      <h2 id="tehtava-ohjeet-heading" class="task-panel__subtitle">Tehtävän ohje</h2>
+    <section class="task-panel__section" aria-label="Tehtävän ohje">
       <transition name="expand" mode="out-in">
         <div v-if="status === 'upcoming'" key="locked" class="task-lock">
+          <strong class="task-panel__box-title">Tehtävän ohje</strong>
           <strong>Ohjeet ovat vielä lukossa.</strong>
           <span>Ne avautuvat automaattisesti, kun päivätehtävä alkaa.</span>
         </div>
         <div v-else-if="status === 'live'" key="live" class="task-instructions">
+          <strong class="task-panel__box-title">Tehtävän ohje</strong>
           <p>{{ task.instructions }}</p>
         </div>
         <div v-else key="ended" class="task-instructions task-instructions--ended">
+          <strong class="task-panel__box-title">Tehtävän ohje</strong>
           <strong>Aika on päättynyt.</strong>
           <p>{{ task.instructions }}</p>
           <p>Tehtävään ei tehdä enää muutoksia. Järjestäjä lisää pisteet pistetaulukkoon.</p>
@@ -57,9 +52,9 @@
       </transition>
     </section>
 
-    <section v-if="dailyTips.length" class="task-panel__section" aria-labelledby="tehtava-vinkit-heading">
-      <h2 id="tehtava-vinkit-heading" class="task-panel__subtitle">Päivävinkit</h2>
+    <section v-if="dailyTips.length" class="task-panel__section" aria-label="Päivävinkit">
       <div class="task-tips">
+        <strong class="task-panel__box-title">Päivävinkit</strong>
         <ol>
           <li v-for="tip in sortedDailyTips" :key="tip.id">
             {{ tip.text }}
@@ -68,9 +63,9 @@
       </div>
     </section>
 
-    <section v-if="nextTask" class="task-panel__section" aria-labelledby="tehtava-seuraava-heading">
-      <h2 id="tehtava-seuraava-heading" class="task-panel__subtitle">Seuraavaksi</h2>
+    <section v-if="nextTask" class="task-panel__section" aria-label="Seuraava tehtävä">
       <div class="next-task-preview">
+        <strong class="task-panel__box-title">Seuraavaksi</strong>
         <span>{{ nextTask.title }}</span>
         <small>{{ formatDate(nextTask.startsAt) }} · {{ nextTask.location }}</small>
       </div>
@@ -81,7 +76,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { DailyTask, DailyTip, TaskStatus } from '../types'
-import { formatClock as formatTime, formatWeekdayDateTime as formatDate, isToday, isTomorrow } from '../utils/dateFormat'
+import { formatClock as formatTime, formatWeekdayDateTime as formatDate } from '../utils/dateFormat'
 import CountdownTimer from './CountdownTimer.vue'
 
 const props = defineProps<{
@@ -98,6 +93,7 @@ const sortedDailyTips = computed(() => {
 const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt)
 const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa' : 'Päivätehtävä käynnissä')
 const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt' : 'Päivätehtävä päättyi')
+const timeLeftLabel = computed(() => props.status === 'upcoming' ? 'Seuraavan tehtävän alkuun' : 'Aikaa jäljellä')
 const taskMetaHeading = computed(() => {
   if (props.status === 'upcoming') {
     return 'Seuraava tehtävä'
@@ -107,29 +103,7 @@ const taskMetaHeading = computed(() => {
     return 'Nykyinen tehtävä'
   }
 
-  return 'Päättynyt tehtävä'
-})
-
-const statusSummary = computed(() => {
-  if (props.status === 'upcoming') {
-    if (isTomorrow(props.task.startsAt)) {
-      return 'Huomisen päivätehtävä - ennakkotiedot alla.'
-    }
-
-    if (!isToday(props.task.startsAt)) {
-      return 'Seuraavan päivän päivätehtävä - ennakkotiedot alla.'
-    }
-
-    return 'Kerää joukkue kasaan ennen lähtölaukausta.'
-  }
-
-  if (props.status === 'live') {
-    return 'Nyt mennään - ohjeet on avattu.'
-  }
-
-  return props.nextTask
-    ? 'Tämä tehtävä on päättynyt. Seuraavan tehtävän tiedot näkyvät alempana.'
-    : 'Päättynyt tehtävä on paketissa.'
+  return 'Tehtävä päättynyt'
 })
 
 </script>

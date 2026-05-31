@@ -1,9 +1,5 @@
 <template>
-  <section class="section-block host-panel" aria-labelledby="host-heading">
-    <div class="ribbon">
-      <span id="host-heading">Järjestäjä</span>
-    </div>
-
+  <section class="section-block host-panel" aria-label="Järjestäjä">
     <div v-if="isHostBusy" class="host-saving-pill" role="status" aria-live="polite">
       <span class="host-saving-pill__spinner" aria-hidden="true" />
       <span>Tallennetaan</span>
@@ -45,7 +41,7 @@
         class="host-card tip-form"
         @submit.prevent="createDailyTaskSetup"
       >
-        <h2>Luo päivätehtävä</h2>
+        <h2>Lisää päivätehtävä</h2>
         <p class="host-help">Syötä tehtävän sisältö ja aikataulu yhdessä paikassa. Ohjeet avautuvat osallistujille vasta aloitushetkellä.</p>
         <label>
           Otsikko
@@ -72,12 +68,12 @@
           <textarea v-model.trim="dailyTaskDraft.instructions" rows="5" required />
         </label>
         <button type="submit" class="primary-button" :disabled="isHostBusy">
-          Tallenna päivätehtävä
+          Lisää päivätehtävä
         </button>
       </form>
 
       <div v-else-if="activeDomain === 'paivatehtava' && activeAction === 'hallinta'" class="host-card">
-        <h2>Hallinnoi päivätehtävää</h2>
+        <h2>Muokkaa päivätehtävää</h2>
         <div class="choice-field">
           <span>Valitse päivätehtävä</span>
           <div class="task-choice-list">
@@ -96,7 +92,7 @@
         </div>
         <div class="task-summary">
           <strong>{{ dailyTask.title }}</strong>
-          <span>{{ dailyTask.location }} · {{ formatDate(dailyTask.startsAt) }}-{{ formatClock(dailyTask.endsAt) }}</span>
+          <span>{{ dailyTask.location }} · {{ formatDate(dailyTask.startsAt) }} - {{ formatClock(dailyTask.endsAt) }}</span>
         </div>
         <div v-if="canRemoveDailyTask(dailyTask)" class="host-subsection">
           <h3>Poista tuleva tehtävä</h3>
@@ -186,7 +182,7 @@
       </div>
 
       <div v-else-if="activeDomain === 'hiiret' && activeAction === 'tila'" class="host-card">
-        <h2>Hiirten tila</h2>
+        <h2>Muokkaa hiiriä</h2>
         <div class="mouse-toggle-grid">
           <button
             v-for="mouse in mice"
@@ -230,7 +226,7 @@
       </div>
 
       <div v-else-if="activeDomain === 'hiiret' && activeAction === 'vinkit'" class="host-card">
-        <h2>Hiirivinkit</h2>
+        <h2>Lisää hiirivinkki</h2>
         <form class="tip-form" @submit.prevent="submitTip">
           <div class="mouse-choice-group" role="radiogroup" aria-label="Valitse hiiri">
             <button
@@ -252,7 +248,7 @@
             <textarea v-model.trim="tipText" rows="3" required />
           </label>
           <button type="submit" class="primary-button" :disabled="isHostBusy">
-            Julkaise vinkki
+            Lisää vinkki
           </button>
         </form>
         <div v-if="mouseTips.length" class="host-list">
@@ -514,7 +510,7 @@
             <input v-model.trim="playerNameDraft" required maxlength="32" />
           </label>
           <button type="submit" class="primary-button" :disabled="isHostBusy || !accessToken">
-            Luo pelaajakoodi
+            Lisää pelaajakoodi
           </button>
           <p v-if="playerInviteError" class="login-panel__error">{{ playerInviteError }}</p>
         </form>
@@ -670,22 +666,22 @@ const domains: { id: HostDomain, label: string }[] = [
 
 const actionsByDomain: Record<HostDomain, { id: HostAction, label: string }[]> = {
   paivatehtava: [
-    { id: 'luo', label: 'Luo' },
-    { id: 'hallinta', label: 'Hallinta' }
+    { id: 'luo', label: 'Lisää' },
+    { id: 'hallinta', label: 'Muokkaa' }
   ],
   hiiret: [
-    { id: 'tila', label: 'Tila' },
-    { id: 'vinkit', label: 'Vinkit' }
+    { id: 'tila', label: 'Muokkaa' },
+    { id: 'vinkit', label: 'Lisää vinkki' }
   ],
   pisteet: [
     { id: 'lisaa', label: 'Lisää' },
     { id: 'muokkaa', label: 'Muokkaa' }
   ],
   joukkueet: [
-    { id: 'hallinta', label: 'Hallinta' }
+    { id: 'hallinta', label: 'Lisää / muokkaa' }
   ],
   pelaajat: [
-    { id: 'hallinta', label: 'Hallinta' }
+    { id: 'hallinta', label: 'Lisää / muokkaa' }
   ]
 }
 
