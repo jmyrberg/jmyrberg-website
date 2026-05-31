@@ -1,0 +1,19 @@
+{
+  "name": "Kesäkisa 2026",
+  "short_name": "Kesäkisa",
+  "description": "Kesäkisa 2026",
+  "lang": "fi",
+  "start_url": "/kesakisa/",
+  "scope": "/kesakisa/",
+  "display": "standalone",
+  "background_color": "#f59aa5",
+  "theme_color": "#f59aa5",
+  "icons": [
+    {
+      "src": "/kesakisa/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

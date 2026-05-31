@@ -1,0 +1,12 @@
+admin_emails = [
+  "jesse.myrberg@gmail.com",
+  "jenni.meuronen@gmail.com"
+]
+
+player_emails = [
+  # "player@example.com"
+  "jesse.myrberg@gmail.com",
+  "jenni.meuronen@gmail.com"
+]
+
+session_duration = "168h"
