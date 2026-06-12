@@ -96,7 +96,7 @@
         </div>
         <div v-if="canRemoveDailyTask(dailyTask)" class="host-subsection">
           <h3>Poista tehtävä</h3>
-          <p class="host-help">Voit poistaa valitun tehtävän myös silloin, kun se on käynnissä. Vähintään yksi tehtävä pitää jäädä jäljelle.</p>
+          <p class="host-help">Voit poistaa valitun tehtävän riippumatta siitä, onko se tuleva, käynnissä vai päättynyt.</p>
           <button type="button" class="pill-button pill-button--danger" :disabled="isHostBusy" @click="removeDailyTask(dailyTask.id)">
             Poista tehtävä
           </button>
@@ -867,7 +867,7 @@ function submitDailyTaskSetup (): void {
 }
 
 function canRemoveDailyTask (task: DailyTask): boolean {
-  return props.dailyTasks.length > 1 && props.dailyTasks.some(item => item.id === task.id)
+  return props.dailyTasks.some(item => item.id === task.id)
 }
 
 function dailyTaskFromDraft (): DailyTask {

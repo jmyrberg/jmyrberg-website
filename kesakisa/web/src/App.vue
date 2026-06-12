@@ -817,14 +817,16 @@ function updateDailyTask (task: DailyTask): void {
 function removeDailyTask (taskId: string): void {
   const task = state.value.dailyTasks.find(item => item.id === taskId)
 
-  if (!task || state.value.dailyTasks.length <= 1) {
+  if (!task) {
     return
   }
 
-  state.value.dailyTasks = state.value.dailyTasks.filter(item => item.id !== taskId)
+  const nextDailyTasks = state.value.dailyTasks.filter(item => item.id !== taskId)
+  state.value.dailyTasks = nextDailyTasks
   state.value.scoreEvents = state.value.scoreEvents.filter(event => event.dailyTaskId !== taskId)
   state.value.dailyTips = state.value.dailyTips.filter(tip => tip.dailyTaskId !== taskId)
-  const fallbackTask = pickFallbackDailyTask(state.value.dailyTasks)
+
+  const fallbackTask = nextDailyTasks.length ? pickFallbackDailyTask(nextDailyTasks) : createEmptyDailyTask()
   state.value.activeDailyTaskId = fallbackTask.id
   state.value.dailyTask = fallbackTask
   openPlayerTab('tehtava')
@@ -848,6 +850,20 @@ function pickFallbackDailyTask (tasks: DailyTask[]): DailyTask {
   const liveTask = sortedTasks.find(task => taskStatusFor(task) === 'live')
 
   return upcomingTask ?? endedTask ?? liveTask ?? state.value.dailyTask
+}
+
+function createEmptyDailyTask (): DailyTask {
+  const timestamp = new Date(Date.now() - 1000).toISOString()
+
+  return {
+    id: 'empty-daily-task',
+    title: 'Ei päivätehtävää',
+    location: 'Ei paikkaa',
+    startsAt: timestamp,
+    endsAt: timestamp,
+    preparationText: 'Lisää uusi päivätehtävä järjestäjänäkymässä.',
+    instructions: 'Päivätehtävää ei ole vielä lisätty.'
+  }
 }
 
 function setMouseFound (mouseId: MouseId, teamId: TeamId): void {

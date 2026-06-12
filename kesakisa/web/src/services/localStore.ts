@@ -20,13 +20,13 @@ export function loadState (): AppState {
 
 export function normalizeState (state: Partial<AppState>, fallback = createInitialState()): AppState {
   const parsedDailyTask = state.dailyTask ? { ...fallback.dailyTask, ...state.dailyTask } : fallback.dailyTask
-  const dailyTasks = Array.isArray(state.dailyTasks) && state.dailyTasks.length > 0
+  const dailyTasks = Array.isArray(state.dailyTasks)
     ? state.dailyTasks
     : [parsedDailyTask]
   const activeDailyTaskId = state.activeDailyTaskId && dailyTasks.some(task => task.id === state.activeDailyTaskId)
     ? state.activeDailyTaskId
-    : dailyTasks[0].id
-  const activeDailyTask = dailyTasks.find(task => task.id === activeDailyTaskId) ?? dailyTasks[0]
+    : dailyTasks[0]?.id ?? parsedDailyTask.id
+  const activeDailyTask = dailyTasks.find(task => task.id === activeDailyTaskId) ?? dailyTasks[0] ?? parsedDailyTask
 
   return {
     ...fallback,
