@@ -40,7 +40,12 @@ export function normalizeState (state: Partial<AppState>, fallback = createIniti
     foundMice: Array.isArray(state.foundMice) ? state.foundMice : fallback.foundMice,
     mouseTips: Array.isArray(state.mouseTips) ? state.mouseTips : fallback.mouseTips,
     mouseTipsSeenAt: typeof state.mouseTipsSeenAt === 'string' ? state.mouseTipsSeenAt : fallback.mouseTipsSeenAt,
-    dailyTips: Array.isArray(state.dailyTips) ? state.dailyTips : fallback.dailyTips,
+    dailyTips: Array.isArray(state.dailyTips)
+      ? state.dailyTips.map(tip => ({
+        ...tip,
+        dailyTaskId: typeof tip.dailyTaskId === 'string' ? tip.dailyTaskId : activeDailyTaskId
+      }))
+      : fallback.dailyTips,
     userMessages: Array.isArray(state.userMessages) ? state.userMessages : fallback.userMessages,
     userMessagesSeenAt: typeof state.userMessagesSeenAt === 'string' ? state.userMessagesSeenAt : fallback.userMessagesSeenAt,
     userMessagesSeenAtByPlayerId: isStringRecord(state.userMessagesSeenAtByPlayerId)

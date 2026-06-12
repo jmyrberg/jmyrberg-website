@@ -159,7 +159,7 @@
               Julkaise päivävinkki
             </button>
           </form>
-          <div v-if="dailyTips.length" class="host-list">
+          <div v-if="sortedDailyTips.length" class="host-list">
             <article v-for="tip in sortedDailyTips" :key="tip.id" class="host-list-item">
               <small>{{ formatDate(tip.createdAt) }}</small>
               <textarea
@@ -759,7 +759,9 @@ const sortedMouseTips = computed(() => {
 })
 
 const sortedDailyTips = computed(() => {
-  return [...props.dailyTips].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  return props.dailyTips
+    .filter(tip => tip.dailyTaskId === props.dailyTask.id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 })
 
 const sortedUserMessages = computed(() => {
@@ -822,6 +824,7 @@ function submitDailyTip (): void {
   runHostActivity('Julkaistaan päivävinkkiä', () => {
     emit('addDailyTip', {
       id: window.crypto?.randomUUID?.() ?? `daily-tip-${Date.now()}`,
+      dailyTaskId: props.dailyTask.id,
       text: dailyTipText.value,
       createdAt: new Date().toISOString()
     })
@@ -909,6 +912,10 @@ function saveDailyTip (tip: DailyTip): void {
 }
 
 function removeDailyTip (tipId: string): void {
+  if (!confirmAction('Poistetaanko tämä päivävinkki? Tätä ei voi kumota.')) {
+    return
+  }
+
   runHostActivity('Poistetaan päivävinkkiä', () => {
     emit('removeDailyTip', tipId)
     delete dailyDrafts[tipId]
@@ -927,6 +934,10 @@ function saveUserMessage (message: UserMessage): void {
 }
 
 function removeUserMessage (messageId: string): void {
+  if (!confirmAction('Poistetaanko tämä viesti? Pelaaja ei näe sitä enää.')) {
+    return
+  }
+
   runHostActivity('Poistetaan viestiä', () => {
     emit('removeUserMessage', messageId)
     delete userMessageDrafts[messageId]
@@ -934,6 +945,10 @@ function removeUserMessage (messageId: string): void {
 }
 
 function removeDailyTask (taskId: string): void {
+  if (!confirmAction(`Poistetaanko tehtävä "${props.dailyTask.title}"? Tehtävän pisteet ja päivävinkit poistuvat samalla.`)) {
+    return
+  }
+
   runHostActivity('Poistetaan päivätehtävää', () => {
     emit('removeDailyTask', taskId)
   })
@@ -950,6 +965,10 @@ function saveMouseTip (tip: MouseTip): void {
 }
 
 function removeMouseTip (tipId: string): void {
+  if (!confirmAction('Poistetaanko tämä hiirivinkki? Tätä ei voi kumota.')) {
+    return
+  }
+
   runHostActivity('Poistetaan hiirivinkkiä', () => {
     emit('removeMouseTip', tipId)
     delete mouseDrafts[tipId]
@@ -1009,6 +1028,10 @@ function submitScore (event: ScoreEvent): void {
 }
 
 function removeScore (eventId: string): void {
+  if (!confirmAction('Poistetaanko tämä pistekirjaus? Pisteet poistuvat taulukosta heti.')) {
+    return
+  }
+
   runHostActivity('Poistetaan pistekirjausta', () => {
     emit('removeScore', eventId)
     delete scoreDrafts[eventId]
@@ -1057,7 +1080,7 @@ function submitPlayer (): void {
 
     latestPlayerInvite.value = result.invite
     emit('addPlayer', {
-      id: playerIdFromName(result.invite.label),
+      id: result.invite.playerId,
       name: result.invite.label,
       teamId: null,
       inviteCode: result.invite.code
@@ -1140,7 +1163,7 @@ function regeneratePlayerInvite (player: Player): void {
       return
     }
 
-    const result = await createPlayerInvite(nextName, props.accessToken)
+    const result = await createPlayerInvite(nextName, props.accessToken, player.id)
 
     if (!result.invite) {
       playerInviteError.value = result.error ?? 'Pelaajakoodia ei voitu luoda.'
@@ -1160,6 +1183,12 @@ function regeneratePlayerInvite (player: Player): void {
 }
 
 function removePlayer (playerId: string): void {
+  const player = props.players.find(item => item.id === playerId)
+
+  if (!confirmAction(`Poistetaanko pelaaja "${player?.name ?? 'Pelaaja'}"? Myös pelaajan viestit poistuvat.`)) {
+    return
+  }
+
   runHostActivity('Poistetaan pelaajaa', () => {
     emit('removePlayer', playerId)
     delete playerDrafts[playerId]
@@ -1167,6 +1196,10 @@ function removePlayer (playerId: string): void {
 }
 
 function removeTeam (teamId: TeamId): void {
+  if (!confirmAction(`Poistetaanko joukkue "${teamName(teamId)}"? Joukkueen pisteet, hiirilöydöt ja pelaajien joukkuevalinnat poistuvat samalla.`)) {
+    return
+  }
+
   runHostActivity('Poistetaan joukkuetta', () => {
     emit('removeTeam', teamId)
     delete teamDrafts[teamId]
@@ -1200,10 +1233,6 @@ function hasDuplicatePlayerName (player: Player, name: string): boolean {
 
 function normalizePlayerName (name: string): string {
   return name.trim().toLocaleLowerCase('fi-FI')
-}
-
-function playerIdFromName (name: string): string {
-  return name.trim().toLocaleLowerCase('fi-FI').replace(/\s+/g, '-')
 }
 
 function teamDraftName (team: Team): string {
@@ -1272,15 +1301,27 @@ function toggleMouse (mouseId: MouseId): void {
 }
 
 function startTaskNow (): void {
+  if (!confirmAction(`Aloitetaanko tehtävä "${props.dailyTask.title}" nyt? Ajastettu aloitus muuttuu.`)) {
+    return
+  }
+
   runHostActivity('Aloitetaan tehtävää', () => {
     emit('startTaskNow')
   })
 }
 
 function endTaskNow (): void {
+  if (!confirmAction(`Lopetetaanko tehtävä "${props.dailyTask.title}" nyt? Tämä siirtää tehtävän päättyneeksi.`)) {
+    return
+  }
+
   runHostActivity('Päätetään tehtävää', () => {
     emit('endTaskNow')
   })
+}
+
+function confirmAction (message: string): boolean {
+  return window.confirm(message)
 }
 
 function runHostActivity (label: string, activity: () => void | Promise<void>): void {

@@ -1915,6 +1915,37 @@ button {
   padding: 10px 0 2px;
 }
 
+.remote-status-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 2px auto 0;
+  padding: 7px 11px;
+  border: 1px solid rgba(45, 36, 38, .28);
+  border-radius: 999px;
+  background: var(--box-parent-bg);
+  color: rgba(45, 36, 38, .72);
+  font-family: var(--font-hand);
+  font-size: .84rem;
+  font-weight: 900;
+}
+
+.remote-status-pill--saving {
+  background: #fff8dc;
+}
+
+.remote-status-pill--saved {
+  background: #dff1df;
+}
+
+.remote-status-pill--error {
+  background: #f7d7dc;
+  color: var(--ink);
+}
+
 .text-button {
   color: rgba(45, 36, 38, .72);
   font-family: var(--font-hand);

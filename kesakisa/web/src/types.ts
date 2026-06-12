@@ -42,6 +42,7 @@ export interface MouseTip {
 
 export interface DailyTip {
   id: string
+  dailyTaskId: string
   text: string
   createdAt: string
 }

@@ -17,6 +17,7 @@ export interface RemoteStateResult {
 export async function loadRemoteState (token: string): Promise<RemoteStateResult> {
   try {
     const response = await fetch(`${API_BASE_URL}/state`, {
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -53,6 +54,7 @@ export async function saveRemoteState (state: AppState, token: string): Promise<
   try {
     const response = await fetch(`${API_BASE_URL}/state`, {
       method: 'PUT',
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'

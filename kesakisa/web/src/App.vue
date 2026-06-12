@@ -72,7 +72,7 @@
           :task="participantDailyTask"
           :status="participantTaskStatus"
           :next-task="nextPreviewDailyTask"
-          :daily-tips="state.dailyTips"
+          :daily-tips="participantDailyTips"
         />
 
         <ScoreBoard
@@ -141,6 +141,19 @@
           </ol>
         </section>
 
+        <div
+          v-if="activeTab === 'host' && isAdminMode && remoteSaveStatus !== 'idle'"
+          class="remote-status-pill"
+          :class="`remote-status-pill--${remoteSaveStatus}`"
+          role="status"
+          aria-live="polite"
+        >
+          <span>{{ remoteSaveStatusLabel }}</span>
+          <button v-if="remoteSaveStatus === 'error'" type="button" class="text-button" @click="retryRemoteStateSave">
+            Yritä uudelleen
+          </button>
+        </div>
+
         <footer v-if="activeTab === 'host' && isAdminMode" class="local-footer">
           <button type="button" class="text-button" @click="resetLocalState">
             Nollaa paikallinen data
@@ -201,6 +214,7 @@ import { loadState, resetState, saveState, STORAGE_KEY } from './services/localS
 import type { AppState, DailyTask, DailyTip, MouseId, MouseTip, Player, ScoreEvent, TaskStatus, Team, TeamId, UserMessage } from './types'
 
 type TabId = 'etusivu' | 'tehtava' | 'pisteet' | 'hiiret' | 'saannot' | 'viestit' | 'host'
+type RemoteSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const tabs: { id: TabId, label: string, icon: string }[] = [
   { id: 'etusivu', label: 'Etusivu', icon: bucketBlack },
@@ -218,13 +232,18 @@ const accessSession = ref<AccessSession | null>(loadAccessSession(requiredRole))
 const isCheckingAccess = ref(!!accessSession.value)
 const state = ref<AppState>(loadState())
 const now = ref(Date.now())
-const STATE_POLL_MS = Number(import.meta.env.VITE_KESAKISA_STATE_POLL_MS ?? 30000)
+const STATE_POLL_MS = Number(import.meta.env.VITE_KESAKISA_STATE_POLL_MS ?? 10000)
+const remoteSaveStatus = ref<RemoteSaveStatus>('idle')
+const remoteSaveError = ref('')
 let timer: number | undefined
 let statePollTimer: number | undefined
 let remoteSaveTimer: number | undefined
 let skipNextLocalSave = false
 let isApplyingRemoteState = false
-let hasPendingRemoteSave = false
+let hasUnsavedRemoteState = false
+let pendingRemoteState: AppState | null = null
+let isRemoteSaveInFlight = false
+let isRemoteStateSyncing = false
 
 const patternStyle = computed(() => ({
   '--background-pattern': `url(${backgroundPattern})`
@@ -277,6 +296,14 @@ const isFreeTime = computed(() => {
 })
 
 const currentPlayer = computed(() => {
+  if (accessSession.value?.playerId) {
+    const player = state.value.players.find(item => item.id === accessSession.value?.playerId)
+
+    if (player) {
+      return player
+    }
+  }
+
   if (!accessSession.value?.label) {
     return undefined
   }
@@ -298,6 +325,26 @@ const playerUserMessages = computed(() => {
   }
 
   return state.value.userMessages.filter(message => message.recipientPlayerId === currentPlayer.value?.id)
+})
+
+const participantDailyTips = computed(() => {
+  return state.value.dailyTips.filter(tip => tip.dailyTaskId === participantDailyTask.value.id)
+})
+
+const remoteSaveStatusLabel = computed(() => {
+  if (remoteSaveStatus.value === 'saving') {
+    return 'Tallennetaan muutoksia'
+  }
+
+  if (remoteSaveStatus.value === 'saved') {
+    return 'Muutokset tallennettu'
+  }
+
+  if (remoteSaveStatus.value === 'error') {
+    return remoteSaveError.value || 'Tallennus epäonnistui'
+  }
+
+  return ''
 })
 
 const latestMouseTipCreatedAt = computed(() => {
@@ -456,7 +503,10 @@ onMounted(() => {
     }
   }, STATE_POLL_MS)
 
+  window.addEventListener('focus', handleWindowFocus)
+  window.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('storage', syncStateFromStorage)
+  window.addEventListener('beforeunload', handleBeforeUnload)
   void verifyStoredAccess()
 })
 
@@ -473,7 +523,10 @@ onBeforeUnmount(() => {
     window.clearTimeout(remoteSaveTimer)
   }
 
+  window.removeEventListener('focus', handleWindowFocus)
+  window.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('storage', syncStateFromStorage)
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
 function syncStateFromStorage (event: StorageEvent): void {
@@ -481,30 +534,82 @@ function syncStateFromStorage (event: StorageEvent): void {
     return
   }
 
+  if (isAdminMode && hasUnsavedRemoteState) {
+    return
+  }
+
   skipNextLocalSave = true
   state.value = loadState()
+}
+
+function handleWindowFocus (): void {
+  void syncRemoteState()
+}
+
+function handleVisibilityChange (): void {
+  if (document.hidden) {
+    if (isAdminMode) {
+      void flushRemoteStateSave()
+    }
+    return
+  }
+
+  void syncRemoteState()
+}
+
+function handleBeforeUnload (event: BeforeUnloadEvent): void {
+  if (!isAdminMode || !accessSession.value || !hasUnsavedRemoteState) {
+    return
+  }
+
+  event.preventDefault()
+  event.returnValue = ''
 }
 
 async function syncRemoteState (): Promise<void> {
   const session = accessSession.value
 
-  if (!session || hasPendingRemoteSave) {
+  if (!session || isRemoteStateSyncing) {
     return
   }
 
-  const result = await loadRemoteState(session.token)
-
-  if (result.state) {
-    applyRemoteState(result.state)
+  if (isAdminMode && (hasUnsavedRemoteState || isRemoteSaveInFlight || remoteSaveTimer)) {
     return
   }
 
-  if (isAdminMode && !result.error) {
-    await saveRemoteState(state.value, session.token)
+  isRemoteStateSyncing = true
+
+  try {
+    const result = await loadRemoteState(session.token)
+
+    if (result.state) {
+      applyRemoteState(result.state)
+      return
+    }
+
+    if (isAdminMode && !result.error) {
+      const saveError = await saveRemoteState(state.value, session.token)
+
+      if (saveError) {
+        pendingRemoteState = cloneState(state.value)
+        hasUnsavedRemoteState = true
+        remoteSaveStatus.value = 'error'
+        remoteSaveError.value = saveError
+      } else {
+        remoteSaveStatus.value = 'saved'
+        remoteSaveError.value = ''
+      }
+    }
+  } finally {
+    isRemoteStateSyncing = false
   }
 }
 
 function applyRemoteState (remoteState: AppState): void {
+  if (isAdminMode && hasUnsavedRemoteState) {
+    return
+  }
+
   const localMouseTipsSeenAt = state.value.mouseTipsSeenAt
   const localUserMessagesSeenAt = state.value.userMessagesSeenAt
   const localUserMessagesSeenAtByPlayerId = state.value.userMessagesSeenAtByPlayerId
@@ -528,17 +633,70 @@ function scheduleRemoteStateSave (nextState: AppState): void {
     return
   }
 
+  hasUnsavedRemoteState = true
+  pendingRemoteState = cloneState(nextState)
+  remoteSaveStatus.value = 'saving'
+  remoteSaveError.value = ''
+
+  if (isRemoteSaveInFlight) {
+    return
+  }
+
   if (remoteSaveTimer) {
     window.clearTimeout(remoteSaveTimer)
   }
 
-  hasPendingRemoteSave = true
   remoteSaveTimer = window.setTimeout(() => {
-    void saveRemoteState(nextState, session.token).finally(() => {
-      hasPendingRemoteSave = false
-      remoteSaveTimer = undefined
-    })
+    void flushRemoteStateSave()
   }, 450)
+}
+
+async function flushRemoteStateSave (): Promise<boolean> {
+  const session = accessSession.value
+
+  if (!session || isRemoteSaveInFlight || !pendingRemoteState) {
+    return false
+  }
+
+  if (remoteSaveTimer) {
+    window.clearTimeout(remoteSaveTimer)
+    remoteSaveTimer = undefined
+  }
+
+  const stateToSave = pendingRemoteState
+  pendingRemoteState = null
+  isRemoteSaveInFlight = true
+  remoteSaveStatus.value = 'saving'
+  remoteSaveError.value = ''
+
+  const saveError = await saveRemoteState(stateToSave, session.token)
+  isRemoteSaveInFlight = false
+
+  if (saveError) {
+    pendingRemoteState = pendingRemoteState ?? stateToSave
+    hasUnsavedRemoteState = true
+    remoteSaveStatus.value = 'error'
+    remoteSaveError.value = saveError
+    return false
+  }
+
+  if (pendingRemoteState) {
+    scheduleRemoteStateSave(pendingRemoteState)
+  } else {
+    hasUnsavedRemoteState = false
+    remoteSaveStatus.value = 'saved'
+    remoteSaveError.value = ''
+  }
+
+  return true
+}
+
+function retryRemoteStateSave (): void {
+  void flushRemoteStateSave()
+}
+
+function cloneState (nextState: AppState): AppState {
+  return JSON.parse(JSON.stringify(nextState)) as AppState
 }
 
 function addScoreEvent (event: ScoreEvent): void {
@@ -597,6 +755,11 @@ function updatePlayer (player: Player): void {
 
 function removePlayer (playerId: string): void {
   state.value.players = state.value.players.filter(player => player.id !== playerId)
+  state.value.userMessages = state.value.userMessages.filter(message => message.recipientPlayerId !== playerId)
+
+  const remainingSeenAt = { ...state.value.userMessagesSeenAtByPlayerId }
+  delete remainingSeenAt[playerId]
+  state.value.userMessagesSeenAtByPlayerId = remainingSeenAt
 }
 
 function addMouseTip (tip: MouseTip): void {
@@ -659,6 +822,8 @@ function removeDailyTask (taskId: string): void {
   }
 
   state.value.dailyTasks = state.value.dailyTasks.filter(item => item.id !== taskId)
+  state.value.scoreEvents = state.value.scoreEvents.filter(event => event.dailyTaskId !== taskId)
+  state.value.dailyTips = state.value.dailyTips.filter(tip => tip.dailyTaskId !== taskId)
   const fallbackTask = pickFallbackDailyTask(state.value.dailyTasks)
   state.value.activeDailyTaskId = fallbackTask.id
   state.value.dailyTask = fallbackTask
@@ -703,6 +868,10 @@ function setMouseHidden (mouseId: MouseId): void {
 }
 
 function resetLocalState (): void {
+  if (!window.confirm('Nollataanko paikallinen data tässä selaimessa? Tätä ei voi kumota.')) {
+    return
+  }
+
   state.value = resetState()
   activeTab.value = isAdminMode ? 'host' : 'etusivu'
 }

@@ -22,8 +22,8 @@ from flask import Request, Response
 
 DEFAULT_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
 DEFAULT_INVITES = [
-    {"name": "Jesse", "label": "Jesse", "role": "player"},
-    {"name": "Jenni", "label": "Jenni", "role": "player"},
+    {"name": "Jesse", "label": "Jesse", "playerId": "jesse", "role": "player"},
+    {"name": "Jenni", "label": "Jenni", "playerId": "jenni", "role": "player"},
 ]
 GENERATED_CODE_HASH_LENGTH = 8
 EDGE_SECRET_HEADER = "X-Kesakisa-Edge-Secret"
@@ -106,11 +106,14 @@ def _invite_code_response(request: Request, cors_headers: dict[str, str]) -> Res
     if not name:
         return _json_response({"status": "error", "message": "Name is required"}, 400, cors_headers)
 
+    requested_player_id = str(payload.get("playerId", "")).strip()
+    player_id = _player_id_from_label(requested_player_id or name)
     invite = {
         "name": name,
         "label": name,
+        "playerId": player_id,
         "role": "player",
-        "code": generated_invite_code(name, _code_salt(), nonce=secrets.token_hex(2).upper()),
+        "code": generated_invite_code(player_id, _code_salt(), nonce=secrets.token_hex(2).upper()),
     }
 
     return _json_response({"status": "success", "data": invite}, 200, cors_headers)
@@ -122,7 +125,11 @@ def _state_response(request: Request, cors_headers: dict[str, str]) -> Response:
     if not session:
         return _json_response({"status": "error", "message": "Session required"}, 401, cors_headers)
 
-    return _json_response({"status": "success", "data": {"state": _load_game_state()}}, 200, cors_headers)
+    return _json_response(
+        {"status": "success", "data": {"state": _load_game_state()}},
+        200,
+        {**cors_headers, **_no_store_headers()},
+    )
 
 
 def _save_state_response(request: Request, cors_headers: dict[str, str]) -> Response:
@@ -138,7 +145,11 @@ def _save_state_response(request: Request, cors_headers: dict[str, str]) -> Resp
         return _json_response({"status": "error", "message": "State object is required"}, 400, cors_headers)
 
     _save_game_state(state)
-    return _json_response({"status": "success", "data": {"state": state}}, 200, cors_headers)
+    return _json_response(
+        {"status": "success", "data": {"state": state}},
+        200,
+        {**cors_headers, **_no_store_headers()},
+    )
 
 
 def _create_session(invite: dict[str, Any]) -> dict[str, Any]:
@@ -147,6 +158,7 @@ def _create_session(invite: dict[str, Any]) -> dict[str, Any]:
     payload = {
         "role": invite["role"],
         "label": invite["label"],
+        "playerId": invite.get("playerId"),
         "teamId": invite.get("teamId"),
         "grantedAt": _iso_timestamp(now),
         "expiresAt": _iso_timestamp(expires_at),
@@ -158,6 +170,7 @@ def _create_session(invite: dict[str, Any]) -> dict[str, Any]:
     return {
         "role": payload["role"],
         "label": payload["label"],
+        "playerId": payload["playerId"],
         "teamId": payload["teamId"],
         "grantedAt": payload["grantedAt"],
         "expiresAt": payload["expiresAt"],
@@ -177,14 +190,19 @@ def _verify_session(token: str) -> dict[str, Any] | None:
         payload = json.loads(payload_bytes.decode("utf-8"))
         role = _normalize_role(payload.get("role"), default="")
         label = str(payload.get("label", "")).strip()
+        player_id = payload.get("playerId")
         expires_at = int(payload.get("exp", 0))
 
         if role not in {"player", "admin"} or not label or expires_at < int(time.time()):
             return None
 
+        if player_id is not None and not isinstance(player_id, str):
+            return None
+
         return {
             "role": role,
             "label": label,
+            "playerId": player_id,
             "teamId": payload.get("teamId"),
             "grantedAt": str(payload["grantedAt"]),
             "expiresAt": str(payload["expiresAt"]),
@@ -231,9 +249,12 @@ def _generated_player_invite_for_code(code: str) -> dict[str, Any] | None:
     if not hmac.compare_digest(code, expected_code):
         return None
 
+    player_id = _player_id_from_code_name(name_part)
+
     return {
         "role": "player",
-        "label": name_part.title(),
+        "label": _label_from_player_id(player_id),
+        "playerId": player_id,
         "teamId": None,
     }
 
@@ -253,9 +274,14 @@ def _invites_by_code() -> dict[str, dict[str, Any]]:
         if not normalized_code or role not in {"player", "admin"} or not label:
             continue
 
+        player_id = invite.get("playerId")
+        if role == "player" and not isinstance(player_id, str):
+            player_id = _player_id_from_label(label)
+
         invites[normalized_code] = {
             "role": role,
             "label": label,
+            "playerId": player_id,
             "teamId": invite.get("teamId"),
         }
 
@@ -317,6 +343,18 @@ def generated_invite_code(name: str, salt: str, nonce: str | None = None) -> str
         return f"{normalized_name}-{normalized_nonce}-{digest}"
 
     return f"{normalized_name}-{digest}"
+
+
+def _player_id_from_label(label: str) -> str:
+    return "-".join(label.strip().lower().split())
+
+
+def _player_id_from_code_name(name_part: str) -> str:
+    return "-".join(part for part in name_part.strip().lower().split("-") if part)
+
+
+def _label_from_player_id(player_id: str) -> str:
+    return player_id.replace("-", " ").title()
 
 
 def _code_salt() -> str:
@@ -388,6 +426,13 @@ def _cors_headers(request: Request) -> dict[str, str]:
         headers["Vary"] = "Origin"
 
     return headers
+
+
+def _no_store_headers() -> dict[str, str]:
+    return {
+        "Cache-Control": "no-store, max-age=0",
+        "Pragma": "no-cache",
+    }
 
 
 def _allowed_origins() -> set[str]:

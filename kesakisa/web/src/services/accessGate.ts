@@ -5,6 +5,7 @@ export type AccessRole = 'player' | 'admin'
 export interface AccessSession {
   role: AccessRole
   label: string
+  playerId?: string | null
   teamId?: string | null
   token: string
   grantedAt: string
@@ -19,6 +20,7 @@ export interface AccessResult {
 export interface PlayerInvite {
   name: string
   label: string
+  playerId: string
   role: 'player'
   code: string
 }
@@ -89,7 +91,7 @@ export async function validateAccessSession (session: AccessSession, requiredRol
   return result.session
 }
 
-export async function createPlayerInvite (name: string, token: string): Promise<PlayerInviteResult> {
+export async function createPlayerInvite (name: string, token: string, playerId?: string): Promise<PlayerInviteResult> {
   try {
     const response = await fetch(`${API_BASE_URL}/invite-code`, {
       method: 'POST',
@@ -97,7 +99,7 @@ export async function createPlayerInvite (name: string, token: string): Promise<
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name })
+      body: JSON.stringify({ name, playerId })
     })
     const payload = await response.json() as { data?: Partial<PlayerInvite>, message?: string }
 
@@ -147,6 +149,7 @@ async function requestSession (path: string, init: RequestInit, requiredRole: Ac
 function isAccessSession (value: Partial<AccessSession>): value is AccessSession {
   return isRole(value.role) &&
     typeof value.label === 'string' &&
+    (value.playerId === undefined || value.playerId === null || typeof value.playerId === 'string') &&
     typeof value.token === 'string' &&
     typeof value.grantedAt === 'string' &&
     typeof value.expiresAt === 'string'
@@ -156,6 +159,7 @@ function isPlayerInvite (value: Partial<PlayerInvite>): value is PlayerInvite {
   return value.role === 'player' &&
     typeof value.name === 'string' &&
     typeof value.label === 'string' &&
+    typeof value.playerId === 'string' &&
     typeof value.code === 'string'
 }
 

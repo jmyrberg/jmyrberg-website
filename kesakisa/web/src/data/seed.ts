@@ -77,6 +77,7 @@ const initialMouseTips: MouseTip[] = [
 const initialDailyTips: DailyTip[] = [
   {
     id: 'daily-tip-1',
+    dailyTaskId: 'day-1',
     text: 'Host voi lisätä päivän aikana lisävinkkejä, jos tehtävä kaipaa tarkennusta.',
     createdAt: '2026-06-30T10:05:00.000Z'
   }
