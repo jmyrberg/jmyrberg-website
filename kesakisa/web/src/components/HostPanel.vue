@@ -30,7 +30,7 @@
           type="button"
           :class="{ 'host-action-tabs__button--active': activeAction === action.id }"
           class="host-action-tabs__button"
-          @click="activeAction = action.id"
+          @click="selectAction(action.id)"
         >
           {{ action.label }}
         </button>
@@ -689,13 +689,13 @@ const playerInviteError = ref('')
 const activeDomain = ref<HostDomain>('paivatehtava')
 const activeAction = ref<HostAction>('luo')
 const dailyTaskDraft = reactive({
-  title: props.dailyTask.title,
-  location: props.dailyTask.location,
-  preparationText: props.dailyTask.preparationText,
-  instructions: props.dailyTask.instructions
+  title: '',
+  location: '',
+  preparationText: '',
+  instructions: ''
 })
-const dailyTaskStartDraft = ref(toDateTimeLocalValue(props.dailyTask.startsAt))
-const dailyTaskEndDraft = ref(toDateTimeLocalValue(props.dailyTask.endsAt))
+const dailyTaskStartDraft = ref('')
+const dailyTaskEndDraft = ref('')
 const dailyDrafts = reactive<Record<string, string>>({})
 const mouseDrafts = reactive<Record<string, string>>({})
 const userMessageDrafts = reactive<Record<string, string>>({})
@@ -798,13 +798,32 @@ watch(
     props.dailyTask.endsAt
   ],
   () => {
-    syncDailyTaskDraft(props.dailyTask)
+    if (activeDomain.value === 'paivatehtava' && activeAction.value === 'hallinta') {
+      syncDailyTaskDraft(props.dailyTask)
+    }
   }
 )
+
+watch([activeDomain, activeAction], ([domain, action]) => {
+  if (domain !== 'paivatehtava') {
+    return
+  }
+
+  if (action === 'hallinta') {
+    syncDailyTaskDraft(props.dailyTask)
+    return
+  }
+
+  resetDailyTaskDraft()
+})
 
 function selectDomain (domain: HostDomain): void {
   activeDomain.value = domain
   activeAction.value = actionsByDomain[domain][0].id
+}
+
+function selectAction (action: HostAction): void {
+  activeAction.value = action
 }
 
 function submitTip (): void {
@@ -857,6 +876,8 @@ function createDailyTaskSetup (): void {
       ...task,
       id: window.crypto?.randomUUID?.() ?? `daily-task-${Date.now()}`
     })
+
+    resetDailyTaskDraft()
   })
 }
 
@@ -896,6 +917,15 @@ function syncDailyTaskDraft (task: DailyTask): void {
   dailyTaskDraft.instructions = task.instructions
   dailyTaskStartDraft.value = toDateTimeLocalValue(task.startsAt)
   dailyTaskEndDraft.value = toDateTimeLocalValue(task.endsAt)
+}
+
+function resetDailyTaskDraft (): void {
+  dailyTaskDraft.title = ''
+  dailyTaskDraft.location = ''
+  dailyTaskDraft.preparationText = ''
+  dailyTaskDraft.instructions = ''
+  dailyTaskStartDraft.value = ''
+  dailyTaskEndDraft.value = ''
 }
 
 function saveDailyTip (tip: DailyTip): void {
