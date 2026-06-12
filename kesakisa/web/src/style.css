@@ -142,6 +142,48 @@ button {
   background: var(--yellow);
 }
 
+.inbox-corner-button {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  z-index: 3;
+  display: grid;
+  width: 38px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid rgba(45, 36, 38, .36);
+  border-radius: 999px;
+  background: var(--box-parent-bg);
+  color: var(--ink);
+  box-shadow: 0 5px 0 rgba(45, 36, 38, .12);
+}
+
+.inbox-corner-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.inbox-corner-button--active {
+  background: var(--yellow);
+}
+
+.inbox-corner-button__notification {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--paper);
+  border-radius: 999px;
+  background: var(--pink-dark);
+  box-shadow: 0 1px 0 rgba(45, 36, 38, .18);
+}
+
 .hero {
   position: relative;
   display: grid;
@@ -277,13 +319,13 @@ button {
 
 .bottom-nav {
   position: fixed;
-  right: 0;
   bottom: 0;
-  left: 0;
+  left: 50%;
   z-index: 30;
   display: grid;
   overflow: hidden;
-  width: 100%;
+  width: min(100%, 430px);
+  transform: translateX(-50%);
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
   padding: var(--chrome-content-gap) 0 calc(var(--bottom-nav-bottom-pad) + env(safe-area-inset-bottom));
@@ -428,17 +470,18 @@ button {
 .home-stack {
   display: grid;
   flex: 1;
+  align-content: start;
   gap: var(--box-gap);
 }
 
 .home-card {
   display: grid;
   width: 100%;
-  min-height: 126px;
-  grid-template-rows: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 11px;
-  padding: 10px;
+  min-height: clamp(108px, 20dvh, 142px);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(7px, 1.5dvh, 11px);
+  padding: clamp(8px, 1.8dvh, 12px);
   border: 0;
   border-radius: 18px;
   background: var(--box-parent-bg);
@@ -454,7 +497,6 @@ button {
 
 .home-card__title {
   display: block;
-  align-self: start;
   font-size: var(--card-title-size);
   font-weight: 900;
   line-height: 1;
@@ -470,8 +512,77 @@ button {
   line-height: 1.4;
 }
 
-.home-card__summary {
-  align-self: start;
+.home-card__body {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  align-self: stretch;
+  align-content: center;
+  gap: clamp(7px, 1.4dvh, 9px);
+}
+
+.inbox-card {
+  display: grid;
+  gap: var(--box-gap);
+}
+
+.inbox-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--box-gap);
+}
+
+.inbox-card__header h2 {
+  margin: 0;
+  font-size: var(--card-title-size);
+  line-height: 1;
+}
+
+.inbox-card__header span {
+  display: inline-grid;
+  min-width: 42px;
+  min-height: 28px;
+  place-items: center;
+  padding: 4px 10px;
+  border: 1px solid rgba(45, 36, 38, .28);
+  border-radius: 999px;
+  background: var(--yellow);
+  font-size: .8rem;
+  font-weight: 900;
+}
+
+.inbox-list {
+  display: grid;
+  gap: var(--box-gap);
+}
+
+.inbox-message,
+.inbox-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(45, 36, 38, .18);
+  border-radius: 16px;
+  background: var(--box-parent-bg);
+}
+
+.inbox-message small {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(45, 36, 38, .58);
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.inbox-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.inbox-empty {
+  color: rgba(45, 36, 38, .68);
+  font-weight: 800;
+  text-align: center;
 }
 
 .section-summary {
@@ -920,6 +1031,17 @@ button {
   padding: 14px;
 }
 
+.login-countdown {
+  margin: 6px 0 8px;
+}
+
+.login-countdown .countdown {
+  --countdown-main-size: clamp(1.28rem, 6vw, 1.7rem);
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 16px;
+}
+
 .login-panel__help,
 .login-panel__error {
   margin: 0;
@@ -1045,7 +1167,7 @@ button {
 }
 
 .points-chips {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .point-chip {
@@ -1802,6 +1924,7 @@ button {
 .hero__title-svg text,
 .ribbon > span,
 .home-card__title,
+.inbox-card__header h2,
 .score-team__title h2,
 .mouse-card__meta strong,
 .host-card h2,

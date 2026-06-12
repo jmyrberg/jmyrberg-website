@@ -4,44 +4,46 @@
       <article class="home-card home-card--task">
         <span class="home-card__title">Päivätehtävä</span>
         <span class="home-card__summary">{{ dailyTaskSummary }}</span>
-        <div
-          v-if="freeTime"
-          class="countdown countdown--free-time"
-          role="status"
-          aria-label="Vapaa-aika"
-        >
-          <strong>
-            <span>Vapaa-aika</span>
-            <span class="free-time-emojis">🎉 🎣 🥏 🏊</span>
-          </strong>
+        <div class="home-card__body">
+          <div
+            v-if="freeTime"
+            class="countdown countdown--free-time"
+            role="status"
+            aria-label="Vapaa-aika"
+          >
+            <strong>
+              <span>Vapaa-aika</span>
+              <span class="free-time-emojis">🎉 🎣 🥏 🏊</span>
+            </strong>
+          </div>
+          <button
+            v-else-if="scoringInProgress"
+            type="button"
+            class="countdown countdown--scoring"
+            aria-label="Avaa pisteet"
+            @click="$emit('navigate', 'pisteet')"
+          >
+            <strong>Pisteiden kirjaus käynnissä</strong>
+          </button>
+          <CountdownTimer
+            v-else
+            :target-at="targetAt"
+            :label="countdownLabel"
+            :finished-label="finishedLabel"
+            aria-label="Avaa päivätehtävä"
+            @click="$emit('navigate', 'tehtava')"
+          />
+          <span v-if="status !== 'ended' && !freeTime" class="home-task-meta">
+            <span>
+              <small>Paikka</small>
+              <strong>{{ task.location }}</strong>
+            </span>
+            <span>
+              <small>Aika</small>
+              <strong>{{ formatTime(task.startsAt) }} - {{ formatTime(task.endsAt) }}</strong>
+            </span>
+          </span>
         </div>
-        <button
-          v-else-if="scoringInProgress"
-          type="button"
-          class="countdown countdown--scoring"
-          aria-label="Avaa pisteet"
-          @click="$emit('navigate', 'pisteet')"
-        >
-          <strong>Pisteiden kirjaus käynnissä</strong>
-        </button>
-        <CountdownTimer
-          v-else
-          :target-at="targetAt"
-          :label="countdownLabel"
-          :finished-label="finishedLabel"
-          aria-label="Avaa päivätehtävä"
-          @click="$emit('navigate', 'tehtava')"
-        />
-        <span v-if="status !== 'ended' && !freeTime" class="home-task-meta">
-          <span>
-            <small>Paikka</small>
-            <strong>{{ task.location }}</strong>
-          </span>
-          <span>
-            <small>Aika</small>
-            <strong>{{ formatTime(task.startsAt) }} - {{ formatTime(task.endsAt) }}</strong>
-          </span>
-        </span>
       </article>
 
       <button
@@ -52,29 +54,33 @@
       >
         <span class="home-card__title">Hiiret</span>
         <span class="home-card__summary">{{ mouseSummary }}</span>
-        <span class="home-mice-grid">
-          <img
-            v-for="mouse in mice"
-            :key="mouse.id"
-            :src="isFound(mouse.id) ? mouse.foundImage : mouse.image"
-            :alt="mouse.label"
-          />
+        <span class="home-card__body">
+          <span class="home-mice-grid">
+            <img
+              v-for="mouse in mice"
+              :key="mouse.id"
+              :src="isFound(mouse.id) ? mouse.foundImage : mouse.image"
+              :alt="mouse.label"
+            />
+          </span>
         </span>
       </button>
 
       <button type="button" class="home-card home-card--scores" @click="$emit('navigate', 'pisteet')">
         <span class="home-card__title">Pisteet</span>
         <span v-if="ownTeamRankSummary" class="home-card__summary">{{ ownTeamRankSummary }}</span>
-        <span class="home-score-grid">
-          <span
-            v-for="team in teams"
-            :key="team.id"
-            class="home-score-team"
-            :class="{ 'home-score-team--own': playerTeamId === team.id }"
-            :style="{ '--team-accent': team.accent }"
-          >
-            <strong>{{ team.name }}</strong>
-            <b>{{ totalForTeam(team.id) }}p</b>
+        <span class="home-card__body">
+          <span class="home-score-grid">
+            <span
+              v-for="team in teams"
+              :key="team.id"
+              class="home-score-team"
+              :class="{ 'home-score-team--own': playerTeamId === team.id }"
+              :style="{ '--team-accent': team.accent }"
+            >
+              <strong>{{ team.name }}</strong>
+              <b>{{ totalForTeam(team.id) }}p</b>
+            </span>
           </span>
         </span>
       </button>

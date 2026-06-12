@@ -95,8 +95,8 @@
           <span>{{ dailyTask.location }} · {{ formatDate(dailyTask.startsAt) }} - {{ formatClock(dailyTask.endsAt) }}</span>
         </div>
         <div v-if="canRemoveDailyTask(dailyTask)" class="host-subsection">
-          <h3>Poista tuleva tehtävä</h3>
-          <p class="host-help">Poisto onnistuu vain tehtävälle, joka ei ole vielä alkanut.</p>
+          <h3>Poista tehtävä</h3>
+          <p class="host-help">Poisto onnistuu tuleville ja päättyneille tehtäville. Käynnissä olevaa tehtävää ei voi poistaa.</p>
           <button type="button" class="pill-button pill-button--danger" :disabled="isHostBusy" @click="removeDailyTask(dailyTask.id)">
             Poista tehtävä
           </button>
@@ -418,6 +418,49 @@
         <p v-else class="empty-note">Ei pistekirjauksia.</p>
       </div>
 
+      <div v-else-if="activeDomain === 'viestit' && activeAction === 'laheta'" class="host-card">
+        <h2>Viestit</h2>
+        <form class="tip-form" @submit.prevent="submitUserMessage">
+          <label>
+            Vastaanottaja
+            <select v-model="userMessageRecipientId" required>
+              <option value="" disabled>Valitse pelaaja</option>
+              <option v-for="player in players" :key="player.id" :value="player.id">
+                {{ player.name }}
+              </option>
+            </select>
+          </label>
+          <label>
+            Uusi viesti
+            <textarea v-model.trim="userMessageText" rows="4" required maxlength="500" />
+          </label>
+          <button type="submit" class="primary-button" :disabled="isHostBusy || !userMessageRecipientId">
+            Lähetä viesti
+          </button>
+        </form>
+
+        <div v-if="userMessages.length" class="host-list">
+          <article v-for="message in sortedUserMessages" :key="message.id" class="host-list-item">
+            <small>{{ playerName(message.recipientPlayerId) }} · {{ formatDate(message.createdAt) }}</small>
+            <textarea
+              :value="userMessageDrafts[message.id] ?? message.text"
+              rows="3"
+              maxlength="500"
+              @input="userMessageDrafts[message.id] = inputValue($event)"
+            />
+            <div class="quick-actions">
+              <button type="button" class="pill-button" :disabled="isHostBusy" @click="saveUserMessage(message)">
+                Tallenna
+              </button>
+              <button type="button" class="pill-button pill-button--danger" :disabled="isHostBusy" @click="removeUserMessage(message.id)">
+                Poista
+              </button>
+            </div>
+          </article>
+        </div>
+        <p v-else class="empty-note">Ei lähetettyjä viestejä.</p>
+      </div>
+
       <div v-else-if="activeDomain === 'joukkueet' && activeAction === 'hallinta'" class="host-card">
         <h2>Joukkueet</h2>
         <form class="tip-form" @submit.prevent="submitTeam">
@@ -570,8 +613,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref } from 'vue'
-import type { DailyTask, DailyTip, FoundMouse, MouseId, MouseTip, Player, ScoreCategory, ScoreEvent, Team, TeamId } from '../types'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import type { DailyTask, DailyTip, FoundMouse, MouseId, MouseTip, Player, ScoreCategory, ScoreEvent, Team, TeamId, UserMessage } from '../types'
 import { createPlayerInvite, type PlayerInvite } from '../services/accessGate'
 import { formatClock, formatShortDateTime as formatDate } from '../utils/dateFormat'
 import mouseBlack from '../assets/mouse-black.svg'
@@ -582,8 +625,8 @@ import mouseWhite from '../assets/mouse-white.svg'
 import mouseWhiteFound from '../assets/mouse-white-found.svg'
 import SubmissionForm from './SubmissionForm.vue'
 
-type HostDomain = 'paivatehtava' | 'hiiret' | 'pisteet' | 'joukkueet' | 'pelaajat'
-type HostAction = 'luo' | 'hallinta' | 'tila' | 'vinkit' | 'lisaa' | 'muokkaa'
+type HostDomain = 'paivatehtava' | 'hiiret' | 'pisteet' | 'viestit' | 'joukkueet' | 'pelaajat'
+type HostAction = 'luo' | 'hallinta' | 'tila' | 'vinkit' | 'lisaa' | 'muokkaa' | 'laheta'
 
 type ScoreDraft = Partial<Pick<ScoreEvent, 'teamId' | 'category' | 'dailyTaskId' | 'title' | 'points' | 'description'>>
 type TeamDraft = Partial<Pick<Team, 'name' | 'accent'>>
@@ -598,6 +641,7 @@ const props = defineProps<{
   activeDailyTaskId: string
   mouseTips: MouseTip[]
   dailyTips: DailyTip[]
+  userMessages: UserMessage[]
   foundMice: FoundMouse[]
   scoreEvents: ScoreEvent[]
 }>()
@@ -618,6 +662,9 @@ const emit = defineEmits<{
   addDailyTip: [tip: DailyTip]
   updateDailyTip: [tip: DailyTip]
   removeDailyTip: [tipId: string]
+  addUserMessage: [message: UserMessage]
+  updateUserMessage: [message: UserMessage]
+  removeUserMessage: [messageId: string]
   createDailyTask: [task: DailyTask]
   updateDailyTask: [task: DailyTask]
   removeDailyTask: [taskId: string]
@@ -631,6 +678,8 @@ const emit = defineEmits<{
 const mouseId = ref<MouseId>('white')
 const tipText = ref('')
 const dailyTipText = ref('')
+const userMessageText = ref('')
+const userMessageRecipientId = ref(props.players[0]?.id ?? '')
 const selectedMouseTeam = ref<TeamId | null>(null)
 const teamNameDraft = ref('')
 const teamAccentDraft = ref('#f7e87a')
@@ -649,6 +698,7 @@ const dailyTaskStartDraft = ref(toDateTimeLocalValue(props.dailyTask.startsAt))
 const dailyTaskEndDraft = ref(toDateTimeLocalValue(props.dailyTask.endsAt))
 const dailyDrafts = reactive<Record<string, string>>({})
 const mouseDrafts = reactive<Record<string, string>>({})
+const userMessageDrafts = reactive<Record<string, string>>({})
 const mouseTipSelections = reactive<Record<string, MouseId>>({})
 const scoreDrafts = reactive<Record<string, ScoreDraft>>({})
 const teamDrafts = reactive<Record<string, TeamDraft>>({})
@@ -660,6 +710,7 @@ const domains: { id: HostDomain, label: string }[] = [
   { id: 'paivatehtava', label: 'Päivätehtävä' },
   { id: 'hiiret', label: 'Hiiret' },
   { id: 'pisteet', label: 'Pisteet' },
+  { id: 'viestit', label: 'Viestit' },
   { id: 'joukkueet', label: 'Joukkueet' },
   { id: 'pelaajat', label: 'Pelaajat' }
 ]
@@ -677,6 +728,9 @@ const actionsByDomain: Record<HostDomain, { id: HostAction, label: string }[]> =
     { id: 'lisaa', label: 'Lisää' },
     { id: 'muokkaa', label: 'Muokkaa' }
   ],
+  viestit: [
+    { id: 'laheta', label: 'Lähetä' }
+  ],
   joukkueet: [
     { id: 'hallinta', label: 'Lisää / muokkaa' }
   ],
@@ -692,7 +746,7 @@ const scoreCategoryOptions: { value: ScoreCategory, label: string, defaultTitle:
   { value: 'bonus', label: 'Bonus', defaultTitle: 'Bonus', defaultPoints: 5 }
 ]
 
-const pointOptions = [1, 2, 3, 5, 10, 16, 20]
+const pointOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 const mice: { id: MouseId, label: string, image: string, foundImage: string }[] = [
   { id: 'white', label: 'Valkoinen hiiri', image: mouseWhite, foundImage: mouseWhiteFound },
@@ -708,6 +762,10 @@ const sortedDailyTips = computed(() => {
   return [...props.dailyTips].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 })
 
+const sortedUserMessages = computed(() => {
+  return [...props.userMessages].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+})
+
 const sortedScoreEvents = computed(() => {
   return [...props.scoreEvents].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 })
@@ -720,6 +778,27 @@ onBeforeUnmount(() => {
     window.clearTimeout(activityTimeout)
   }
 })
+
+watch(() => props.players.map(player => player.id).join('|'), () => {
+  if (!props.players.some(player => player.id === userMessageRecipientId.value)) {
+    userMessageRecipientId.value = props.players[0]?.id ?? ''
+  }
+})
+
+watch(
+  () => [
+    props.dailyTask.id,
+    props.dailyTask.title,
+    props.dailyTask.location,
+    props.dailyTask.preparationText,
+    props.dailyTask.instructions,
+    props.dailyTask.startsAt,
+    props.dailyTask.endsAt
+  ],
+  () => {
+    syncDailyTaskDraft(props.dailyTask)
+  }
+)
 
 function selectDomain (domain: HostDomain): void {
   activeDomain.value = domain
@@ -751,6 +830,23 @@ function submitDailyTip (): void {
   })
 }
 
+function submitUserMessage (): void {
+  if (!userMessageRecipientId.value) {
+    return
+  }
+
+  runHostActivity('Lähetetään viestiä', () => {
+    emit('addUserMessage', {
+      id: window.crypto?.randomUUID?.() ?? `message-${Date.now()}`,
+      recipientPlayerId: userMessageRecipientId.value,
+      text: userMessageText.value,
+      createdAt: new Date().toISOString()
+    })
+
+    userMessageText.value = ''
+  })
+}
+
 function createDailyTaskSetup (): void {
   runHostActivity('Tallennetaan päivätehtävää', () => {
     const task = dailyTaskFromDraft()
@@ -768,7 +864,11 @@ function submitDailyTaskSetup (): void {
 }
 
 function canRemoveDailyTask (task: DailyTask): boolean {
-  return props.dailyTasks.length > 1 && new Date(task.startsAt).getTime() > Date.now()
+  const startsAt = new Date(task.startsAt).getTime()
+  const endsAt = new Date(task.endsAt).getTime()
+  const now = Date.now()
+
+  return props.dailyTasks.length > 1 && (now < startsAt || now > endsAt)
 }
 
 function dailyTaskFromDraft (): DailyTask {
@@ -786,13 +886,17 @@ function dailyTaskFromDraft (): DailyTask {
 function selectDailyTask (task: DailyTask): void {
   runHostActivity('Vaihdetaan päivätehtävää', () => {
     emit('setActiveDailyTask', task.id)
-    dailyTaskDraft.title = task.title
-    dailyTaskDraft.location = task.location
-    dailyTaskDraft.preparationText = task.preparationText
-    dailyTaskDraft.instructions = task.instructions
-    dailyTaskStartDraft.value = toDateTimeLocalValue(task.startsAt)
-    dailyTaskEndDraft.value = toDateTimeLocalValue(task.endsAt)
+    syncDailyTaskDraft(task)
   })
+}
+
+function syncDailyTaskDraft (task: DailyTask): void {
+  dailyTaskDraft.title = task.title
+  dailyTaskDraft.location = task.location
+  dailyTaskDraft.preparationText = task.preparationText
+  dailyTaskDraft.instructions = task.instructions
+  dailyTaskStartDraft.value = toDateTimeLocalValue(task.startsAt)
+  dailyTaskEndDraft.value = toDateTimeLocalValue(task.endsAt)
 }
 
 function saveDailyTip (tip: DailyTip): void {
@@ -807,6 +911,25 @@ function saveDailyTip (tip: DailyTip): void {
 function removeDailyTip (tipId: string): void {
   runHostActivity('Poistetaan päivävinkkiä', () => {
     emit('removeDailyTip', tipId)
+    delete dailyDrafts[tipId]
+  })
+}
+
+function saveUserMessage (message: UserMessage): void {
+  runHostActivity('Tallennetaan viestiä', () => {
+    emit('updateUserMessage', {
+      ...message,
+      text: userMessageDrafts[message.id] ?? message.text
+    })
+
+    delete userMessageDrafts[message.id]
+  })
+}
+
+function removeUserMessage (messageId: string): void {
+  runHostActivity('Poistetaan viestiä', () => {
+    emit('removeUserMessage', messageId)
+    delete userMessageDrafts[messageId]
   })
 }
 
@@ -829,6 +952,8 @@ function saveMouseTip (tip: MouseTip): void {
 function removeMouseTip (tipId: string): void {
   runHostActivity('Poistetaan hiirivinkkiä', () => {
     emit('removeMouseTip', tipId)
+    delete mouseDrafts[tipId]
+    delete mouseTipSelections[tipId]
   })
 }
 
@@ -886,6 +1011,7 @@ function submitScore (event: ScoreEvent): void {
 function removeScore (eventId: string): void {
   runHostActivity('Poistetaan pistekirjausta', () => {
     emit('removeScore', eventId)
+    delete scoreDrafts[eventId]
   })
 }
 
@@ -1043,6 +1169,7 @@ function removePlayer (playerId: string): void {
 function removeTeam (teamId: TeamId): void {
   runHostActivity('Poistetaan joukkuetta', () => {
     emit('removeTeam', teamId)
+    delete teamDrafts[teamId]
   })
 }
 
@@ -1181,6 +1308,10 @@ function runHostActivity (label: string, activity: () => void | Promise<void>): 
 
 function teamName (teamId: TeamId | undefined): string {
   return props.teams.find(team => team.id === teamId)?.name ?? ''
+}
+
+function playerName (playerId: string): string {
+  return props.players.find(player => player.id === playerId)?.name ?? 'Poistettu pelaaja'
 }
 
 function mouseLabel (mouseId: MouseId): string {

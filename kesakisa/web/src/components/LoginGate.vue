@@ -7,6 +7,15 @@
     <form class="login-form" @submit.prevent="submitCode">
       <p class="login-panel__help">{{ helpText }}</p>
 
+      <div v-if="requiredRole === 'player'" class="login-countdown">
+        <CountdownTimer
+          :target-at="competitionStartsAt"
+          label="Kesäkisa alkaa 21.6. klo 00.00"
+          finished-label="Kesäkisa on alkanut"
+          :as-button="false"
+        />
+      </div>
+
       <label>
         Koodi
         <input
@@ -31,6 +40,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import CountdownTimer from './CountdownTimer.vue'
 import { loginWithCode, type AccessRole, type AccessSession } from '../services/accessGate'
 
 const props = defineProps<{
@@ -44,6 +54,7 @@ const emit = defineEmits<{
 const code = ref('')
 const errorText = ref('')
 const isSubmitting = ref(false)
+const competitionStartsAt = '2026-06-21T00:00:00+03:00'
 
 const title = computed(() => props.requiredRole === 'admin' ? 'Järjestäjän koodi' : 'Pelaajakoodi')
 const helpText = computed(() => props.requiredRole === 'admin'

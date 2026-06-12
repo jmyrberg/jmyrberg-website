@@ -108,7 +108,7 @@ const categoryOptions: { value: ScoreCategory, label: string, defaultTitle: stri
   { value: 'bonus', label: 'Bonus', defaultTitle: 'Bonus', defaultPoints: 5 }
 ]
 
-const pointOptions = [1, 2, 3, 5, 10, 16, 20]
+const pointOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 const teamId = ref<TeamId>(props.teams[0]?.id ?? 'joukkue-1')
 const category = ref<ScoreCategory>('paivatehtava')
 const selectedDailyTaskId = ref(props.dailyTasks[0]?.id ?? '')

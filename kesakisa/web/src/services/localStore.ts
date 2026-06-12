@@ -40,15 +40,29 @@ export function normalizeState (state: Partial<AppState>, fallback = createIniti
     foundMice: Array.isArray(state.foundMice) ? state.foundMice : fallback.foundMice,
     mouseTips: Array.isArray(state.mouseTips) ? state.mouseTips : fallback.mouseTips,
     mouseTipsSeenAt: typeof state.mouseTipsSeenAt === 'string' ? state.mouseTipsSeenAt : fallback.mouseTipsSeenAt,
-    dailyTips: Array.isArray(state.dailyTips) ? state.dailyTips : fallback.dailyTips
+    dailyTips: Array.isArray(state.dailyTips) ? state.dailyTips : fallback.dailyTips,
+    userMessages: Array.isArray(state.userMessages) ? state.userMessages : fallback.userMessages,
+    userMessagesSeenAt: typeof state.userMessagesSeenAt === 'string' ? state.userMessagesSeenAt : fallback.userMessagesSeenAt,
+    userMessagesSeenAtByPlayerId: isStringRecord(state.userMessagesSeenAtByPlayerId)
+      ? state.userMessagesSeenAtByPlayerId
+      : fallback.userMessagesSeenAtByPlayerId
   }
 }
 
 export function remoteStatePayload (state: AppState): AppState {
   return {
     ...state,
-    mouseTipsSeenAt: null
+    mouseTipsSeenAt: null,
+    userMessagesSeenAt: null,
+    userMessagesSeenAtByPlayerId: {}
   }
+}
+
+function isStringRecord (value: unknown): value is Record<string, string> {
+  return !!value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.values(value).every(item => typeof item === 'string')
 }
 
 export function saveState (state: AppState): void {

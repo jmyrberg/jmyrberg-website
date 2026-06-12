@@ -38,6 +38,21 @@
         Järjestäjä
       </button>
 
+      <button
+        v-if="accessSession && !isCheckingAccess && !isAdminMode"
+        type="button"
+        class="inbox-corner-button"
+        :class="{ 'inbox-corner-button--active': activeTab === 'viestit' }"
+        :aria-label="hasUnreadUserMessages ? 'Avaa viestit, uusi viesti' : 'Avaa viestit'"
+        @click="openInbox"
+      >
+        <span v-if="hasUnreadUserMessages" class="inbox-corner-button__notification" aria-hidden="true" />
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6h16v12H4z" />
+          <path d="m4 7 8 6 8-6" />
+        </svg>
+      </button>
+
       <div v-if="accessSession && !isCheckingAccess" class="view-stack">
         <HomePanel
           v-if="activeTab === 'etusivu'"
@@ -74,6 +89,11 @@
           @view-tips="markMouseTipsSeen"
         />
 
+        <MessageInbox
+          v-else-if="activeTab === 'viestit'"
+          :messages="playerUserMessages"
+        />
+
         <HostPanel
           v-else-if="activeTab === 'host' && isAdminMode"
           :teams="state.teams"
@@ -84,6 +104,7 @@
           :active-daily-task-id="state.activeDailyTaskId"
           :mouse-tips="state.mouseTips"
           :daily-tips="state.dailyTips"
+          :user-messages="state.userMessages"
           :found-mice="state.foundMice"
           :score-events="state.scoreEvents"
           @add-score="addScoreEvent"
@@ -101,6 +122,9 @@
           @add-daily-tip="addDailyTip"
           @update-daily-tip="updateDailyTip"
           @remove-daily-tip="removeDailyTip"
+          @add-user-message="addUserMessage"
+          @update-user-message="updateUserMessage"
+          @remove-user-message="removeUserMessage"
           @create-daily-task="createDailyTask"
           @update-daily-task="updateDailyTask"
           @remove-daily-task="removeDailyTask"
@@ -161,6 +185,7 @@ import HomePanel from './components/HomePanel.vue'
 import HostPanel from './components/HostPanel.vue'
 import KesakisaHeader from './components/KesakisaHeader.vue'
 import LoginGate from './components/LoginGate.vue'
+import MessageInbox from './components/MessageInbox.vue'
 import MouseHunt from './components/MouseHunt.vue'
 import ScoreBoard from './components/ScoreBoard.vue'
 import backgroundPattern from './assets/background.svg'
@@ -173,9 +198,9 @@ import { rules } from './data/seed'
 import { clearAccessSession, loadAccessSession, saveAccessSession, validateAccessSession, type AccessRole, type AccessSession } from './services/accessGate'
 import { loadRemoteState, saveRemoteState } from './services/gameStateApi'
 import { loadState, resetState, saveState, STORAGE_KEY } from './services/localStore'
-import type { AppState, DailyTask, DailyTip, MouseId, MouseTip, Player, ScoreEvent, TaskStatus, Team, TeamId } from './types'
+import type { AppState, DailyTask, DailyTip, MouseId, MouseTip, Player, ScoreEvent, TaskStatus, Team, TeamId, UserMessage } from './types'
 
-type TabId = 'etusivu' | 'tehtava' | 'pisteet' | 'hiiret' | 'saannot' | 'host'
+type TabId = 'etusivu' | 'tehtava' | 'pisteet' | 'hiiret' | 'saannot' | 'viestit' | 'host'
 
 const tabs: { id: TabId, label: string, icon: string }[] = [
   { id: 'etusivu', label: 'Etusivu', icon: bucketBlack },
@@ -267,6 +292,14 @@ const playerAccent = computed(() => {
   return team?.accent
 })
 
+const playerUserMessages = computed(() => {
+  if (!currentPlayer.value) {
+    return []
+  }
+
+  return state.value.userMessages.filter(message => message.recipientPlayerId === currentPlayer.value?.id)
+})
+
 const latestMouseTipCreatedAt = computed(() => {
   return state.value.mouseTips.reduce<string | null>((latestTipCreatedAt, tip) => {
     if (!latestTipCreatedAt) {
@@ -291,6 +324,42 @@ const hasUnreadMouseTips = computed(() => {
   return new Date(latestMouseTipCreatedAt.value).getTime() > new Date(state.value.mouseTipsSeenAt).getTime()
 })
 
+const latestUserMessageCreatedAt = computed(() => {
+  return playerUserMessages.value.reduce<string | null>((latestMessageCreatedAt, message) => {
+    if (!latestMessageCreatedAt) {
+      return message.createdAt
+    }
+
+    return new Date(message.createdAt).getTime() > new Date(latestMessageCreatedAt).getTime()
+      ? message.createdAt
+      : latestMessageCreatedAt
+  }, null)
+})
+
+const hasUnreadUserMessages = computed(() => {
+  if (!latestUserMessageCreatedAt.value) {
+    return false
+  }
+
+  const seenAt = currentPlayerUserMessagesSeenAt.value
+
+  if (!seenAt) {
+    return true
+  }
+
+  return new Date(latestUserMessageCreatedAt.value).getTime() > new Date(seenAt).getTime()
+})
+
+const currentPlayerUserMessagesSeenAt = computed(() => {
+  const playerId = currentPlayer.value?.id
+
+  if (!playerId) {
+    return null
+  }
+
+  return state.value.userMessagesSeenAtByPlayerId[playerId] ?? state.value.userMessagesSeenAt
+})
+
 function scoredTeamsForTask (task: DailyTask): Set<TeamId> {
   const scoredTeams = new Set(
     state.value.scoreEvents
@@ -310,6 +379,36 @@ function markMouseTipsSeen (seenAt: string): void {
   }
 
   state.value.mouseTipsSeenAt = seenAt
+}
+
+function markUserMessagesSeen (seenAt: string): void {
+  const playerId = currentPlayer.value?.id
+
+  if (!playerId) {
+    return
+  }
+
+  const previousSeenAt = currentPlayerUserMessagesSeenAt.value
+
+  if (
+    previousSeenAt &&
+    new Date(previousSeenAt).getTime() >= new Date(seenAt).getTime()
+  ) {
+    return
+  }
+
+  state.value.userMessagesSeenAtByPlayerId = {
+    ...state.value.userMessagesSeenAtByPlayerId,
+    [playerId]: seenAt
+  }
+}
+
+function openInbox (): void {
+  activeTab.value = 'viestit'
+
+  if (latestUserMessageCreatedAt.value) {
+    markUserMessagesSeen(latestUserMessageCreatedAt.value)
+  }
 }
 
 function taskStatusFor (task: DailyTask): TaskStatus {
@@ -339,6 +438,12 @@ watch(state, nextState => {
     scheduleRemoteStateSave(nextState)
   }
 }, { deep: true })
+
+watch(() => activeTab.value === 'viestit' ? latestUserMessageCreatedAt.value : null, seenAt => {
+  if (seenAt) {
+    markUserMessagesSeen(seenAt)
+  }
+})
 
 onMounted(() => {
   timer = window.setInterval(() => {
@@ -401,10 +506,14 @@ async function syncRemoteState (): Promise<void> {
 
 function applyRemoteState (remoteState: AppState): void {
   const localMouseTipsSeenAt = state.value.mouseTipsSeenAt
+  const localUserMessagesSeenAt = state.value.userMessagesSeenAt
+  const localUserMessagesSeenAtByPlayerId = state.value.userMessagesSeenAtByPlayerId
   isApplyingRemoteState = true
   state.value = {
     ...remoteState,
-    mouseTipsSeenAt: localMouseTipsSeenAt
+    mouseTipsSeenAt: localMouseTipsSeenAt,
+    userMessagesSeenAt: localUserMessagesSeenAt,
+    userMessagesSeenAtByPlayerId: localUserMessagesSeenAtByPlayerId
   }
 
   window.setTimeout(() => {
@@ -516,6 +625,18 @@ function removeDailyTip (tipId: string): void {
   state.value.dailyTips = state.value.dailyTips.filter(tip => tip.id !== tipId)
 }
 
+function addUserMessage (message: UserMessage): void {
+  state.value.userMessages = [message, ...state.value.userMessages]
+}
+
+function updateUserMessage (message: UserMessage): void {
+  state.value.userMessages = state.value.userMessages.map(existingMessage => existingMessage.id === message.id ? message : existingMessage)
+}
+
+function removeUserMessage (messageId: string): void {
+  state.value.userMessages = state.value.userMessages.filter(message => message.id !== messageId)
+}
+
 function createDailyTask (task: DailyTask): void {
   state.value.dailyTasks = [task, ...state.value.dailyTasks]
   state.value.activeDailyTaskId = task.id
@@ -533,7 +654,7 @@ function updateDailyTask (task: DailyTask): void {
 function removeDailyTask (taskId: string): void {
   const task = state.value.dailyTasks.find(item => item.id === taskId)
 
-  if (!task || state.value.dailyTasks.length <= 1 || taskStatusFor(task) !== 'upcoming') {
+  if (!task || state.value.dailyTasks.length <= 1 || taskStatusFor(task) === 'live') {
     return
   }
 
@@ -557,11 +678,11 @@ function setActiveDailyTask (taskId: string): void {
 
 function pickFallbackDailyTask (tasks: DailyTask[]): DailyTask {
   const sortedTasks = [...tasks].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
-  const liveTask = sortedTasks.find(task => taskStatusFor(task) === 'live')
   const upcomingTask = sortedTasks.find(task => taskStatusFor(task) === 'upcoming')
   const endedTask = [...sortedTasks].reverse().find(task => taskStatusFor(task) === 'ended')
+  const liveTask = sortedTasks.find(task => taskStatusFor(task) === 'live')
 
-  return liveTask ?? upcomingTask ?? endedTask ?? state.value.dailyTask
+  return upcomingTask ?? endedTask ?? liveTask ?? state.value.dailyTask
 }
 
 function setMouseFound (mouseId: MouseId, teamId: TeamId): void {

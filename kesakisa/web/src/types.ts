@@ -46,6 +46,13 @@ export interface DailyTip {
   createdAt: string
 }
 
+export interface UserMessage {
+  id: string
+  recipientPlayerId: string
+  text: string
+  createdAt: string
+}
+
 export interface DailyTask {
   id: string
   title: string
@@ -67,6 +74,9 @@ export interface AppState {
   mouseTips: MouseTip[]
   mouseTipsSeenAt: string | null
   dailyTips: DailyTip[]
+  userMessages: UserMessage[]
+  userMessagesSeenAt: string | null
+  userMessagesSeenAtByPlayerId: Record<string, string>
 }
 
 export interface MouseAsset {
