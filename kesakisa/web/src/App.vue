@@ -817,7 +817,7 @@ function updateDailyTask (task: DailyTask): void {
 function removeDailyTask (taskId: string): void {
   const task = state.value.dailyTasks.find(item => item.id === taskId)
 
-  if (!task || state.value.dailyTasks.length <= 1 || taskStatusFor(task) === 'live') {
+  if (!task || state.value.dailyTasks.length <= 1) {
     return
   }
 
