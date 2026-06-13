@@ -328,6 +328,7 @@
         <SubmissionForm
           :teams="teams"
           :daily-tasks="dailyTasks"
+          :active-daily-task-id="activeDailyTaskId"
           :disabled="isHostBusy"
           @add="submitScore"
         />
@@ -338,7 +339,10 @@
         <div v-if="scoreEvents.length" class="host-list">
           <article v-for="scoreEvent in sortedScoreEvents" :key="scoreEvent.id" class="host-list-item score-editor">
             <header class="score-editor__header">
-              <strong>{{ scoreHeader(scoreEvent) }}</strong>
+              <div class="score-editor__title-row">
+                <strong>{{ scoreHeader(scoreEvent) }}</strong>
+                <span v-if="isScoreDirty(scoreEvent)" class="dirty-badge">Tallentamatta</span>
+              </div>
               <small>{{ teamName(scoreTeam(scoreEvent)) }} · {{ formatDate(scoreEvent.createdAt) }}</small>
             </header>
 
@@ -442,8 +446,11 @@
             </label>
 
             <div class="quick-actions">
-              <button type="button" class="pill-button" :disabled="isHostBusy" @click="saveScore(scoreEvent)">
+              <button type="button" class="pill-button" :disabled="isHostBusy || !isScoreDirty(scoreEvent)" @click="saveScore(scoreEvent)">
                 Tallenna
+              </button>
+              <button v-if="isScoreDirty(scoreEvent)" type="button" class="pill-button" :disabled="isHostBusy" @click="cancelScoreDraft(scoreEvent.id)">
+                Peru
               </button>
               <button type="button" class="pill-button pill-button--danger" :disabled="isHostBusy" @click="removeScore(scoreEvent.id)">
                 Poista
@@ -653,6 +660,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import type { DailyTask, DailyTip, FoundMouse, MouseId, MouseTip, Player, ScoreCategory, ScoreEvent, Team, TeamId, UserMessage } from '../types'
 import { createPlayerInvite, type PlayerInvite } from '../services/accessGate'
 import { formatClock, formatShortDateTime as formatDate } from '../utils/dateFormat'
+import { dailyTaskScoreKey, defaultDailyTaskId, pointOptions, scoreCategoryLabel, scoreCategoryOptions, scoreDefaultsForCategory, teamNameForScore, validateScoreEvent } from '../utils/score'
 import mouseBlack from '../assets/mouse-black.svg'
 import mouseBlackFound from '../assets/mouse-black-found.svg'
 import mousePink from '../assets/mouse-pink.svg'
@@ -732,8 +740,8 @@ const teamAccentDraft = ref('#f7e87a')
 const playerNameDraft = ref('')
 const latestPlayerInvite = ref<PlayerInvite | null>(null)
 const playerInviteError = ref('')
-const activeDomain = ref<HostDomain>('paivatehtava')
-const activeAction = ref<HostAction>('luo')
+const activeDomain = ref<HostDomain>('pisteet')
+const activeAction = ref<HostAction>('lisaa')
 const selectedDailyTaskId = ref(props.activeDailyTaskId)
 const dailyTaskDraft = reactive({
   title: '',
@@ -789,14 +797,6 @@ const actionsByDomain: Record<HostDomain, { id: HostAction, label: string }[]> =
 }
 
 const teamColorOptions = ['#f7e87a', '#8bd3f7', '#7ecf9a', '#f59aa5', '#f7c0c8', '#fff8dc']
-const scoreCategoryOptions: { value: ScoreCategory, label: string, defaultTitle: string, defaultPoints: number }[] = [
-  { value: 'paivatehtava', label: 'Päivätehtävä', defaultTitle: 'Päivätehtävä', defaultPoints: 10 },
-  { value: 'hiiritehtava', label: 'Hiiritehtävä', defaultTitle: 'Hiiritehtävä', defaultPoints: 16 },
-  { value: 'bonus', label: 'Bonus', defaultTitle: 'Bonus', defaultPoints: 5 }
-]
-
-const pointOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-
 const mice: { id: MouseId, label: string, image: string, foundImage: string }[] = [
   { id: 'white', label: 'Valkoinen hiiri', image: mouseWhite, foundImage: mouseWhiteFound },
   { id: 'pink', label: 'Pinkki hiiri', image: mousePink, foundImage: mousePinkFound },
@@ -1201,15 +1201,15 @@ function updateScoreDraft (event: ScoreEvent, draft: ScoreDraft): void {
 }
 
 function updateScoreCategory (event: ScoreEvent, category: ScoreCategory): void {
-  const option = scoreCategoryOptions.find(item => item.value === category)
-  const dailyTaskId = category === 'paivatehtava' ? scoreDailyTaskId(event) || props.dailyTasks[0]?.id : undefined
+  const dailyTaskId = category === 'paivatehtava' ? scoreDailyTaskId(event) || defaultDailyTaskId(props.dailyTasks, props.activeDailyTaskId) : undefined
   const selectedTask = props.dailyTasks.find(task => task.id === dailyTaskId)
+  const defaults = scoreDefaultsForCategory(category, selectedTask)
 
   updateScoreDraft(event, {
     category,
     dailyTaskId,
-    title: category === 'paivatehtava' ? selectedTask?.title ?? option?.defaultTitle : option?.defaultTitle,
-    points: option?.defaultPoints
+    title: defaults.title,
+    points: defaults.points
   })
 }
 
@@ -1221,44 +1221,91 @@ function updateScoreTask (event: ScoreEvent, task: DailyTask): void {
 }
 
 function saveScore (event: ScoreEvent): void {
-  const title = scoreTitle(event).trim()
-  const points = scorePoints(event)
+  const category = scoreCategory(event)
+  const nextEvent: ScoreEvent = {
+    ...event,
+    teamId: scoreTeam(event),
+    category,
+    dailyTaskId: category === 'paivatehtava' ? scoreDailyTaskId(event) : undefined,
+    title: scoreTitle(event).trim(),
+    points: scorePoints(event),
+    description: scoreDescription(event)
+  }
+  const validationError = validateScoreEvent(nextEvent, props.teams, props.dailyTasks)
 
-  if (!title) {
-    showHostFeedback('error', 'Pistekirjauksen otsikko puuttuu.')
+  if (validationError) {
+    showHostFeedback('error', validationError)
     return
   }
 
-  if (!Number.isFinite(points) || points < -100 || points > 100) {
-    showHostFeedback('error', 'Pisteiden pitää olla väliltä -100 ja 100.')
+  if (duplicateDailyScoreEvents(nextEvent, event.id).length) {
+    showHostFeedback('error', 'Tälle joukkueelle on jo päivätehtävän pisteet. Poista toinen kirjaus tai muokkaa olemassa olevaa.')
     return
   }
 
   runHostActivity('Tallennetaan pisteitä', () => {
-    const category = scoreCategory(event)
-
-    emit('updateScore', {
-      ...event,
-      teamId: scoreTeam(event),
-      category,
-      dailyTaskId: category === 'paivatehtava' ? scoreDailyTaskId(event) : undefined,
-      title,
-      points,
-      description: scoreDescription(event)
-    })
-
+    emit('updateScore', nextEvent)
     delete scoreDrafts[event.id]
   })
 }
 
-function submitScore (event: ScoreEvent): void {
+function submitScore (event: ScoreEvent, accept: (accepted: boolean) => void): void {
+  const validationError = validateScoreEvent(event, props.teams, props.dailyTasks)
+
+  if (validationError) {
+    showHostFeedback('error', validationError)
+    accept(false)
+    return
+  }
+
+  const duplicates = duplicateDailyScoreEvents(event)
+
+  if (duplicates.length > 1) {
+    showHostFeedback('error', 'Tällä joukkueella on useampi päivätehtävän pistekirjaus. Korjaa ne Muokkaa-näkymässä.')
+    accept(false)
+    return
+  }
+
+  const duplicate = duplicates[0]
+
+  if (duplicate) {
+    const message = `Joukkueella ${teamNameForScore(event.teamId, props.teams)} on jo pisteet tehtävälle "${scoreTaskTitle(event)}" (${duplicate.points}p). Päivitetäänkö arvoksi ${event.points}p?`
+
+    if (!confirmAction(message)) {
+      showHostFeedback('success', 'Pistekirjausta ei muutettu.', 2200)
+      accept(false)
+      return
+    }
+
+    accept(true)
+    runHostActivity('Päivitetään pisteitä', () => {
+      emit('updateScore', {
+        ...duplicate,
+        teamId: event.teamId,
+        category: event.category,
+        dailyTaskId: event.dailyTaskId,
+        title: event.title,
+        points: event.points,
+        description: event.description
+      })
+    }, 'Pistekirjaus päivitetty')
+    return
+  }
+
+  accept(true)
   runHostActivity('Tallennetaan pisteitä', () => {
     emit('addScore', event)
-  })
+  }, 'Pistekirjaus lisätty')
 }
 
 function removeScore (eventId: string): void {
-  if (!confirmAction('Poistetaanko tämä pistekirjaus? Pisteet poistuvat taulukosta heti.')) {
+  const event = props.scoreEvents.find(scoreEvent => scoreEvent.id === eventId)
+
+  if (!event) {
+    return
+  }
+
+  if (!confirmAction(`Poistetaanko "${scoreEntryLabel(event)}"? Pisteet poistuvat taulukosta heti.`)) {
     return
   }
 
@@ -1266,6 +1313,38 @@ function removeScore (eventId: string): void {
     emit('removeScore', eventId)
     delete scoreDrafts[eventId]
   })
+}
+
+function cancelScoreDraft (eventId: string): void {
+  delete scoreDrafts[eventId]
+}
+
+function isScoreDirty (event: ScoreEvent): boolean {
+  return !!scoreDrafts[event.id]
+}
+
+function duplicateDailyScoreEvents (event: ScoreEvent, exceptEventId?: string): ScoreEvent[] {
+  const key = dailyTaskScoreKey(event)
+
+  if (!key) {
+    return []
+  }
+
+  return props.scoreEvents.filter(scoreEvent => {
+    return scoreEvent.id !== exceptEventId && dailyTaskScoreKey(scoreEvent) === key
+  })
+}
+
+function scoreTaskTitle (event: ScoreEvent): string {
+  return props.dailyTasks.find(task => task.id === event.dailyTaskId)?.title ?? event.title
+}
+
+function scoreEntryLabel (event: ScoreEvent): string {
+  const title = event.category === 'paivatehtava'
+    ? props.dailyTasks.find(task => task.id === event.dailyTaskId)?.title ?? event.title
+    : scoreCategoryLabel(event.category)
+
+  return `${teamName(event.teamId)} - ${title} - ${event.points}p`
 }
 
 function submitTeam (): void {
@@ -1495,7 +1574,7 @@ function scoreCategory (event: ScoreEvent): ScoreCategory {
 }
 
 function scoreDailyTaskId (event: ScoreEvent): string {
-  return scoreDrafts[event.id]?.dailyTaskId ?? event.dailyTaskId ?? props.dailyTasks[0]?.id ?? ''
+  return scoreDrafts[event.id]?.dailyTaskId ?? event.dailyTaskId ?? defaultDailyTaskId(props.dailyTasks, props.activeDailyTaskId)
 }
 
 function scoreTitle (event: ScoreEvent): string {
@@ -1519,10 +1598,6 @@ function scoreHeader (event: ScoreEvent): string {
 
   const selectedTask = props.dailyTasks.find(task => task.id === scoreDailyTaskId(event))
   return selectedTask?.title ?? scoreTitle(event) ?? scoreCategoryLabel(category)
-}
-
-function scoreCategoryLabel (category: ScoreCategory): string {
-  return scoreCategoryOptions.find(option => option.value === category)?.label ?? ''
 }
 
 function selectedTipMouse (tip: MouseTip): MouseId {

@@ -68,18 +68,18 @@
 
       <button type="button" class="home-card home-card--scores" @click="$emit('navigate', 'pisteet')">
         <span class="home-card__title">Pisteet</span>
-        <span v-if="ownTeamRankSummary" class="home-card__summary">{{ ownTeamRankSummary }}</span>
+        <span v-if="scoreSummary" class="home-card__summary">{{ scoreSummary }}</span>
         <span class="home-card__body">
           <span class="home-score-grid">
             <span
-              v-for="team in teams"
-              :key="team.id"
+              v-for="row in scoreRows"
+              :key="row.team.id"
               class="home-score-team"
-              :class="{ 'home-score-team--own': playerTeamId === team.id }"
-              :style="{ '--team-accent': team.accent }"
+              :class="{ 'home-score-team--own': playerTeamId === row.team.id }"
+              :style="{ '--team-accent': row.team.accent }"
             >
-              <strong>{{ team.name }}</strong>
-              <b>{{ totalForTeam(team.id) }}p</b>
+              <strong>{{ row.team.name }}</strong>
+              <b>{{ row.total }}p</b>
             </span>
           </span>
         </span>
@@ -172,7 +172,33 @@ const upcomingTaskSummary = computed(() => {
 const freeTimeMessage = 'Ei tehtävää käynnissä - nauti mökkiajasta ja pidä silmät auki.'
 const mouseSummary = computed(() => hiddenMouseCount.value > 0 ? 'Hiiriä on piilossa' : 'Kaikki hiiret on löydetty')
 const hiddenMouseCount = computed(() => mice.length - props.foundMice.length)
-const ownTeamRankSummary = computed(() => props.playerTeamId ? teamStandingSummary(props.playerTeamId) : '')
+const scoreRows = computed(() => {
+  const rows = props.teams.map((team, index) => ({
+    team,
+    originalIndex: index,
+    total: totalForTeam(team.id),
+    rank: 1
+  }))
+    .sort((a, b) => b.total - a.total || a.originalIndex - b.originalIndex)
+
+  rows.forEach((row, index) => {
+    const previousRow = rows[index - 1]
+    row.rank = previousRow && previousRow.total === row.total ? previousRow.rank : index + 1
+  })
+
+  return rows
+})
+const scoreSummary = computed(() => {
+  if (!props.events.length) {
+    return 'Pisteitä ei ole vielä kirjattu.'
+  }
+
+  if (props.scoringInProgress) {
+    return 'Pisteitä kirjataan parhaillaan.'
+  }
+
+  return props.playerTeamId ? teamStandingSummary(props.playerTeamId) : 'Tilanne päivittyy pisteiden mukana.'
+})
 
 function totalForTeam (teamId: TeamId): number {
   return props.events
@@ -181,12 +207,7 @@ function totalForTeam (teamId: TeamId): number {
 }
 
 function teamRank (teamId: TeamId): number {
-  const totals = props.teams
-    .map(team => totalForTeam(team.id))
-    .sort((a, b) => b - a)
-  const teamTotal = totalForTeam(teamId)
-
-  return totals.findIndex(total => total === teamTotal) + 1
+  return scoreRows.value.find(row => row.team.id === teamId)?.rank ?? props.teams.length
 }
 
 function teamStandingSummary (teamId: TeamId): string {

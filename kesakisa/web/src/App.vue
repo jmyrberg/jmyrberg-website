@@ -203,6 +203,7 @@ import { clearAccessSession, loadAccessSession, saveAccessSession, validateAcces
 import { loadRemoteState, saveRemoteState } from './services/gameStateApi'
 import { loadState, resetState, saveState, STORAGE_KEY } from './services/localStore'
 import type { AppState, DailyTask, DailyTip, MouseId, MouseTip, Player, ScoreEvent, TaskStatus, Team, TeamId, UserMessage } from './types'
+import { dailyTaskScoreKey, normalizeScoreEvent } from './utils/score'
 
 type TabId = 'etusivu' | 'tehtava' | 'pisteet' | 'hiiret' | 'saannot' | 'viestit' | 'host'
 type RemoteSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -738,16 +739,53 @@ function formatStatusTime (value: string): string {
 }
 
 function addScoreEvent (event: ScoreEvent): void {
-  state.value.scoreEvents = [event, ...state.value.scoreEvents]
+  const scoreEvent = normalizeScoreEvent(event, state.value.teams, state.value.dailyTasks, state.value.activeDailyTaskId)
+
+  if (!scoreEvent) {
+    return
+  }
+
+  const duplicate = findDuplicateDailyScore(scoreEvent)
+
+  if (duplicate) {
+    updateScoreEvent({
+      ...duplicate,
+      teamId: scoreEvent.teamId,
+      category: scoreEvent.category,
+      dailyTaskId: scoreEvent.dailyTaskId,
+      title: scoreEvent.title,
+      points: scoreEvent.points,
+      description: scoreEvent.description
+    })
+    return
+  }
+
+  state.value.scoreEvents = [scoreEvent, ...state.value.scoreEvents]
   openPlayerTab('pisteet')
 }
 
 function updateScoreEvent (event: ScoreEvent): void {
-  state.value.scoreEvents = state.value.scoreEvents.map(existingEvent => existingEvent.id === event.id ? event : existingEvent)
+  const scoreEvent = normalizeScoreEvent(event, state.value.teams, state.value.dailyTasks, state.value.activeDailyTaskId)
+
+  if (!scoreEvent) {
+    return
+  }
+
+  state.value.scoreEvents = state.value.scoreEvents.map(existingEvent => existingEvent.id === scoreEvent.id ? scoreEvent : existingEvent)
 }
 
 function removeScoreEvent (eventId: string): void {
   state.value.scoreEvents = state.value.scoreEvents.filter(event => event.id !== eventId)
+}
+
+function findDuplicateDailyScore (event: ScoreEvent): ScoreEvent | undefined {
+  const key = dailyTaskScoreKey(event)
+
+  if (!key) {
+    return undefined
+  }
+
+  return state.value.scoreEvents.find(scoreEvent => scoreEvent.id !== event.id && dailyTaskScoreKey(scoreEvent) === key)
 }
 
 function addTeam (team: Team): void {

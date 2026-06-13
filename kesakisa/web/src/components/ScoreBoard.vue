@@ -2,20 +2,21 @@
   <section class="section-block" aria-label="Pisteet">
     <div class="score-grid">
       <article
-        v-for="team in teams"
-        :key="team.id"
+        v-for="row in scoreRows"
+        :key="row.team.id"
         class="score-team"
-        :class="{ 'score-team--own': playerTeamId === team.id }"
-        :style="{ '--team-accent': team.accent }"
+        :class="{ 'score-team--own': playerTeamId === row.team.id }"
+        :style="{ '--team-accent': row.team.accent }"
       >
-        <div class="score-team__title" :style="{ '--team-accent': team.accent }">
-          <h2>{{ team.name }}</h2>
-          <strong>{{ totalForTeam(team.id) }}p</strong>
+        <div class="score-team__title" :style="{ '--team-accent': row.team.accent }">
+          <span class="score-team__rank">#{{ row.rank }}</span>
+          <h2>{{ row.team.name }}</h2>
+          <strong>{{ row.total }}p</strong>
         </div>
 
         <div class="score-list">
           <div
-            v-for="event in eventsForTeam(team.id)"
+            v-for="event in row.events"
             :key="event.id"
             class="score-entry"
           >
@@ -26,7 +27,10 @@
               :aria-expanded="expandedEventId === event.id"
               @click="toggle(event.id)"
             >
-              <strong>{{ event.title }}</strong>
+              <span class="score-row__text">
+                <strong>{{ event.title }}</strong>
+                <small>{{ scoreCategoryLabel(event.category) }} · {{ formatDate(event.createdAt) }}</small>
+              </span>
               <b>{{ event.points }}p</b>
             </button>
 
@@ -37,6 +41,7 @@
               </div>
             </transition>
           </div>
+          <p v-if="!row.events.length" class="score-empty">Ei kirjauksia vielä.</p>
         </div>
       </article>
     </div>
@@ -44,9 +49,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { ScoreEvent, Team, TeamId } from '../types'
 import { formatShortDateTime as formatDate } from '../utils/dateFormat'
+import { scoreCategoryLabel } from '../utils/score'
 
 const props = defineProps<{
   teams: Team[]
@@ -56,17 +62,27 @@ const props = defineProps<{
 
 const expandedEventId = ref<string | null>(null)
 
-function eventsForTeam (teamId: TeamId): ScoreEvent[] {
-  return props.events
-    .filter(event => event.teamId === teamId)
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-}
+const scoreRows = computed(() => {
+  const rows = props.teams.map((team, index) => ({
+    team,
+    originalIndex: index,
+    total: props.events
+      .filter(event => event.teamId === team.id)
+      .reduce((total, event) => total + event.points, 0),
+    events: props.events
+      .filter(event => event.teamId === team.id)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    rank: 1
+  }))
+    .sort((a, b) => b.total - a.total || a.originalIndex - b.originalIndex)
 
-function totalForTeam (teamId: TeamId): number {
-  return props.events
-    .filter(event => event.teamId === teamId)
-    .reduce((total, event) => total + event.points, 0)
-}
+  rows.forEach((row, index) => {
+    const previousRow = rows[index - 1]
+    row.rank = previousRow && previousRow.total === row.total ? previousRow.rank : index + 1
+  })
+
+  return rows
+})
 
 function toggle (eventId: string): void {
   expandedEventId.value = expandedEventId.value === eventId ? null : eventId

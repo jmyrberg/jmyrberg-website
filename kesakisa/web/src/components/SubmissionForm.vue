@@ -81,6 +81,10 @@
       <textarea v-model.trim="description" rows="4" />
     </label>
 
+    <p v-if="formError" class="form-error submission-form__wide" role="alert">
+      {{ formError }}
+    </p>
+
     <button type="submit" class="primary-button" :disabled="disabled">
       Tallenna suoritus
     </button>
@@ -88,37 +92,66 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { DailyTask, ScoreCategory, ScoreEvent, Team, TeamId } from '../types'
+import { defaultDailyTaskId, pointOptions, scoreCategoryOptions, scoreDefaultsForCategory, validateScoreEvent } from '../utils/score'
 import { formatShortDateTime as formatDate } from '../utils/dateFormat'
 
 const props = defineProps<{
   teams: Team[]
   dailyTasks: DailyTask[]
+  activeDailyTaskId: string
   disabled?: boolean
 }>()
 
 const emit = defineEmits<{
-  add: [event: ScoreEvent]
+  add: [event: ScoreEvent, accept: (accepted: boolean) => void]
 }>()
 
-const categoryOptions: { value: ScoreCategory, label: string, defaultTitle: string, defaultPoints: number }[] = [
-  { value: 'paivatehtava', label: 'Päivätehtävä', defaultTitle: 'Päivätehtävä', defaultPoints: 10 },
-  { value: 'hiiritehtava', label: 'Hiiritehtävä', defaultTitle: 'Hiiritehtävä', defaultPoints: 16 },
-  { value: 'bonus', label: 'Bonus', defaultTitle: 'Bonus', defaultPoints: 5 }
-]
-
-const pointOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+const categoryOptions = scoreCategoryOptions
 const teamId = ref<TeamId>(props.teams[0]?.id ?? 'joukkue-1')
 const category = ref<ScoreCategory>('paivatehtava')
-const selectedDailyTaskId = ref(props.dailyTasks[0]?.id ?? '')
+const selectedDailyTaskId = ref(defaultDailyTaskId(props.dailyTasks, props.activeDailyTaskId))
 const selectedDailyTask = computed(() => props.dailyTasks.find(task => task.id === selectedDailyTaskId.value))
-const title = ref(selectedDailyTask.value?.title ?? 'Päivätehtävä')
-const points = ref(10)
+const initialDefaults = scoreDefaultsForCategory(category.value, selectedDailyTask.value)
+const title = ref(initialDefaults.title)
+const points = ref(initialDefaults.points)
 const description = ref('')
+const formError = ref('')
+
+watch(
+  () => props.activeDailyTaskId,
+  () => {
+    if (category.value !== 'paivatehtava') {
+      return
+    }
+
+    selectedDailyTaskId.value = defaultDailyTaskId(props.dailyTasks, props.activeDailyTaskId)
+    applyCategoryDefaults()
+  }
+)
+
+watch(
+  () => props.dailyTasks.map(task => task.id).join('|'),
+  () => {
+    if (!props.dailyTasks.some(task => task.id === selectedDailyTaskId.value)) {
+      selectedDailyTaskId.value = defaultDailyTaskId(props.dailyTasks, props.activeDailyTaskId)
+      applyCategoryDefaults()
+    }
+  }
+)
+
+watch(
+  () => props.teams.map(team => team.id).join('|'),
+  () => {
+    if (!props.teams.some(team => team.id === teamId.value)) {
+      teamId.value = props.teams[0]?.id ?? ''
+    }
+  }
+)
 
 function submit (): void {
-  emit('add', {
+  const event: ScoreEvent = {
     id: window.crypto?.randomUUID?.() ?? `event-${Date.now()}`,
     teamId: teamId.value,
     category: category.value,
@@ -127,10 +160,26 @@ function submit (): void {
     points: Number(points.value),
     description: description.value,
     createdAt: new Date().toISOString()
+  }
+
+  const validationError = validateScoreEvent(event, props.teams, props.dailyTasks)
+
+  if (validationError) {
+    formError.value = validationError
+    return
+  }
+
+  let wasAccepted = false
+  formError.value = ''
+  emit('add', event, accepted => {
+    wasAccepted = accepted
   })
 
-  title.value = category.value === 'hiiritehtava' ? 'Hiiritehtävä' : selectedDailyTask.value?.title ?? 'Päivätehtävä'
-  points.value = category.value === 'hiiritehtava' ? 16 : 10
+  if (!wasAccepted) {
+    return
+  }
+
+  applyCategoryDefaults()
   description.value = ''
 }
 
@@ -142,13 +191,21 @@ function selectCategory (nextCategory: ScoreCategory): void {
     return
   }
 
-  title.value = nextCategory === 'paivatehtava' ? selectedDailyTask.value?.title ?? option.defaultTitle : option.defaultTitle
-  points.value = option.defaultPoints
+  applyCategoryDefaults()
 }
 
 function selectDailyTask (task: DailyTask): void {
   selectedDailyTaskId.value = task.id
-  title.value = task.title
+  if (category.value === 'paivatehtava') {
+    applyCategoryDefaults()
+  }
+}
+
+function applyCategoryDefaults (): void {
+  const defaults = scoreDefaultsForCategory(category.value, selectedDailyTask.value)
+  title.value = defaults.title
+  points.value = defaults.points
+  formError.value = ''
 }
 
 </script>
