@@ -456,6 +456,10 @@ button {
   box-shadow: none;
 }
 
+.view-stack--host-status-dock {
+  padding-bottom: 104px;
+}
+
 .view-stack > .home-panel {
   min-height: 100%;
 }
@@ -1035,7 +1039,8 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mouse-card--shake .mouse-card__image {
+  .mouse-card--shake .mouse-card__image,
+  .host-status-dock__icon--spin {
     animation: none;
   }
 }
@@ -1248,6 +1253,10 @@ button {
   position: relative;
 }
 
+.host-panel--busy {
+  box-shadow: 0 6px 18px rgba(94, 40, 50, .12), inset 0 0 0 2px rgba(247, 232, 122, .62);
+}
+
 .host-card {
   padding: 12px;
   border: 1px solid rgba(45, 36, 38, .18);
@@ -1276,69 +1285,6 @@ button {
   margin: 2px 0 -2px;
   border-radius: 999px;
   background: rgba(45, 36, 38, .28);
-}
-
-.host-feedback-stack {
-  display: grid;
-  gap: 7px;
-}
-
-.host-feedback {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 36px;
-  padding: 8px 10px;
-  border: 1px solid rgba(45, 36, 38, .28);
-  border-radius: 14px;
-  background: var(--box-parent-bg);
-  color: var(--ink);
-  font-family: var(--font-hand);
-  font-size: .86rem;
-  font-weight: 900;
-  line-height: 1.15;
-  box-shadow: 0 4px 0 rgba(45, 36, 38, .1);
-}
-
-.host-feedback > span {
-  min-width: 0;
-}
-
-.host-feedback .text-button {
-  flex: 0 0 auto;
-}
-
-.host-feedback--pending,
-.host-feedback--remote-saving {
-  background: #fff8dc;
-}
-
-.host-feedback--success,
-.host-feedback--remote-saved {
-  background: #dff1df;
-}
-
-.host-feedback--error,
-.host-feedback--remote-error {
-  background: #f7d7dc;
-}
-
-.host-feedback__spinner {
-  flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
-  border: 1px solid rgba(45, 36, 38, .24);
-  border-top-color: var(--ink);
-  border-radius: 999px;
-  animation: host-loading-spin .7s linear infinite;
-}
-
-@keyframes host-loading-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .host-domain-tabs {
@@ -2013,6 +1959,112 @@ button {
   gap: var(--box-gap);
   justify-content: center;
   padding: 10px 0 2px;
+}
+
+.host-status-dock {
+  position: fixed;
+  right: auto;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 45;
+  width: min(100%, 430px);
+  padding: 0 12px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.host-status-dock__inner {
+  display: grid;
+  gap: 7px;
+  pointer-events: auto;
+}
+
+.host-status-dock__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 54px;
+  padding: 9px 10px;
+  border: 1px solid rgba(45, 36, 38, .32);
+  border-radius: 18px;
+  background: var(--box-parent-bg);
+  color: var(--ink);
+  box-shadow: 0 7px 0 rgba(45, 36, 38, .14), 0 14px 30px rgba(94, 40, 50, .18);
+  font-family: var(--font-hand);
+}
+
+.host-status-dock__item--pending {
+  background: #fff8dc;
+}
+
+.host-status-dock__item--success {
+  background: #dff1df;
+}
+
+.host-status-dock__item--error {
+  background: #f7d7dc;
+}
+
+.host-status-dock__icon {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(45, 36, 38, .32);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .74);
+  font-size: .92rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.host-status-dock__icon--spin {
+  border-color: rgba(45, 36, 38, .22);
+  border-top-color: var(--ink);
+  color: transparent;
+  animation: host-loading-spin .72s linear infinite;
+}
+
+.host-status-dock__copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.host-status-dock__copy strong,
+.host-status-dock__copy span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.host-status-dock__copy strong {
+  font-size: .86rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.host-status-dock__copy span {
+  color: rgba(45, 36, 38, .72);
+  font-size: .82rem;
+  font-weight: 800;
+  line-height: 1.18;
+}
+
+.host-status-dock .text-button {
+  align-self: center;
+  min-height: 34px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .68);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+@keyframes host-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .remote-status-pill {

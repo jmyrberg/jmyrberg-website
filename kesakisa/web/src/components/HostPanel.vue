@@ -1,38 +1,13 @@
 <template>
-  <section class="section-block host-panel" aria-label="Järjestäjä">
+  <section
+    class="section-block host-panel"
+    :class="{
+      'host-panel--busy': isHostBusy,
+      'host-panel--status-dock-visible': statusDockVisible
+    }"
+    aria-label="Järjestäjä"
+  >
     <div class="host-stack">
-      <div
-        v-if="hostFeedback || remoteStatusVisible || remoteSyncError"
-        class="host-feedback-stack"
-        aria-live="polite"
-      >
-        <div
-          v-if="hostFeedback"
-          class="host-feedback"
-          :class="`host-feedback--${hostFeedback.status}`"
-          role="status"
-        >
-          <span v-if="hostFeedback.status === 'pending'" class="host-feedback__spinner" aria-hidden="true" />
-          <span>{{ hostFeedback.message }}</span>
-        </div>
-
-        <div
-          v-if="remoteStatusVisible"
-          class="host-feedback"
-          :class="`host-feedback--remote-${remoteSaveStatus}`"
-          role="status"
-        >
-          <span>{{ remoteSaveMessage }}</span>
-          <button v-if="remoteSaveStatus === 'error'" type="button" class="text-button" @click="emit('retryRemoteSave')">
-            Yritä uudelleen
-          </button>
-        </div>
-
-        <div v-if="remoteSyncError" class="host-feedback host-feedback--error" role="status">
-          <span>{{ remoteSyncError }}</span>
-        </div>
-      </div>
-
       <span class="host-tab-label">Aihe</span>
       <div class="host-domain-tabs">
         <button
@@ -672,7 +647,6 @@ import SubmissionForm from './SubmissionForm.vue'
 type HostDomain = 'paivatehtava' | 'hiiret' | 'pisteet' | 'viestit' | 'joukkueet' | 'pelaajat'
 type HostAction = 'luo' | 'hallinta' | 'tila' | 'vinkit' | 'lisaa' | 'muokkaa' | 'laheta'
 type HostFeedbackStatus = 'pending' | 'success' | 'error'
-type RemoteSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 type ScoreDraft = Partial<Pick<ScoreEvent, 'teamId' | 'category' | 'dailyTaskId' | 'title' | 'points' | 'description'>>
 type TeamDraft = Partial<Pick<Team, 'name' | 'accent'>>
@@ -694,9 +668,7 @@ const props = defineProps<{
   userMessages: UserMessage[]
   foundMice: FoundMouse[]
   scoreEvents: ScoreEvent[]
-  remoteSaveStatus: RemoteSaveStatus
-  remoteSaveMessage: string
-  remoteSyncError: string
+  statusDockVisible: boolean
 }>()
 
 const emit = defineEmits<{
@@ -726,7 +698,7 @@ const emit = defineEmits<{
   setMouseHidden: [mouseId: MouseId]
   startTaskNow: [taskId: string]
   endTaskNow: [taskId: string]
-  retryRemoteSave: []
+  hostFeedbackChange: [feedback: HostFeedback | null]
 }>()
 
 const mouseId = ref<MouseId>('white')
@@ -826,13 +798,18 @@ const editableDailyTask = computed(() => {
   return props.dailyTasks.find(task => task.id === selectedDailyTaskId.value) ?? props.dailyTask
 })
 const isHostBusy = computed(() => hostFeedback.value?.status === 'pending')
-const remoteStatusVisible = computed(() => props.remoteSaveStatus !== 'idle' && props.remoteSaveMessage !== '')
 
 onBeforeUnmount(() => {
   if (feedbackTimeout) {
     window.clearTimeout(feedbackTimeout)
   }
+
+  emit('hostFeedbackChange', null)
 })
+
+watch(hostFeedback, feedback => {
+  emit('hostFeedbackChange', feedback)
+}, { immediate: true })
 
 watch(() => props.players.map(player => player.id).join('|'), () => {
   if (!props.players.some(player => player.id === userMessageRecipientId.value)) {

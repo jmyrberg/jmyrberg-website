@@ -53,7 +53,11 @@
         </svg>
       </button>
 
-      <div v-if="accessSession && !isCheckingAccess" class="view-stack">
+      <div
+        v-if="accessSession && !isCheckingAccess"
+        class="view-stack"
+        :class="{ 'view-stack--host-status-dock': hostStatusDockVisible }"
+      >
         <HomePanel
           v-if="activeTab === 'etusivu'"
           :teams="state.teams"
@@ -107,9 +111,7 @@
           :user-messages="state.userMessages"
           :found-mice="state.foundMice"
           :score-events="state.scoreEvents"
-          :remote-save-status="remoteSaveStatus"
-          :remote-save-message="remoteSaveStatusLabel"
-          :remote-sync-error="remoteSyncError"
+          :status-dock-visible="hostStatusDockVisible"
           @add-score="addScoreEvent"
           @update-score="updateScoreEvent"
           @remove-score="removeScoreEvent"
@@ -136,7 +138,7 @@
           @set-mouse-hidden="setMouseHidden"
           @start-task-now="startTaskNow"
           @end-task-now="endTaskNow"
-          @retry-remote-save="retryRemoteStateSave"
+          @host-feedback-change="hostFeedback = $event"
         />
 
         <section v-else class="section-block" aria-label="Säännöt">
@@ -155,6 +157,15 @@
         </footer>
       </div>
     </main>
+
+    <HostStatusDock
+      v-if="hostStatusDockVisible"
+      :host-feedback="hostFeedback"
+      :remote-save-status="remoteSaveStatus"
+      :remote-save-message="remoteSaveStatusLabel"
+      :remote-sync-error="remoteSyncError"
+      @retry-remote-save="retryRemoteStateSave"
+    />
 
     <nav v-if="accessSession && !isCheckingAccess && !isAdminMode" class="bottom-nav" aria-label="Kesäkisan näkymät">
       <button
@@ -187,6 +198,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import DailyTaskPanel from './components/DailyTaskPanel.vue'
 import HomePanel from './components/HomePanel.vue'
 import HostPanel from './components/HostPanel.vue'
+import HostStatusDock from './components/HostStatusDock.vue'
 import KesakisaHeader from './components/KesakisaHeader.vue'
 import LoginGate from './components/LoginGate.vue'
 import MessageInbox from './components/MessageInbox.vue'
@@ -207,6 +219,11 @@ import { dailyTaskScoreKey, normalizeScoreEvent } from './utils/score'
 
 type TabId = 'etusivu' | 'tehtava' | 'pisteet' | 'hiiret' | 'saannot' | 'viestit' | 'host'
 type RemoteSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+type HostFeedbackStatus = 'pending' | 'success' | 'error'
+type HostFeedback = {
+  status: HostFeedbackStatus
+  message: string
+}
 
 const tabs: { id: TabId, label: string, icon: string }[] = [
   { id: 'etusivu', label: 'Etusivu', icon: bucketBlack },
@@ -229,6 +246,7 @@ const remoteSaveStatus = ref<RemoteSaveStatus>('idle')
 const remoteSaveError = ref('')
 const remoteSyncError = ref('')
 const lastRemoteSavedAt = ref<string | null>(null)
+const hostFeedback = ref<HostFeedback | null>(null)
 let timer: number | undefined
 let statePollTimer: number | undefined
 let remoteSaveTimer: number | undefined
@@ -340,6 +358,14 @@ const remoteSaveStatusLabel = computed(() => {
   }
 
   return ''
+})
+
+const hostStatusDockVisible = computed(() => {
+  if (!isAdminMode || activeTab.value !== 'host') {
+    return false
+  }
+
+  return !!hostFeedback.value || remoteSaveStatus.value !== 'idle' || !!remoteSyncError.value
 })
 
 const latestMouseTipCreatedAt = computed(() => {
