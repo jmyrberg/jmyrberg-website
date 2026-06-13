@@ -107,6 +107,9 @@
           :user-messages="state.userMessages"
           :found-mice="state.foundMice"
           :score-events="state.scoreEvents"
+          :remote-save-status="remoteSaveStatus"
+          :remote-save-message="remoteSaveStatusLabel"
+          :remote-sync-error="remoteSyncError"
           @add-score="addScoreEvent"
           @update-score="updateScoreEvent"
           @remove-score="removeScoreEvent"
@@ -133,6 +136,7 @@
           @set-mouse-hidden="setMouseHidden"
           @start-task-now="startTaskNow"
           @end-task-now="endTaskNow"
+          @retry-remote-save="retryRemoteStateSave"
         />
 
         <section v-else class="section-block" aria-label="Säännöt">
@@ -141,22 +145,9 @@
           </ol>
         </section>
 
-        <div
-          v-if="activeTab === 'host' && isAdminMode && remoteSaveStatus !== 'idle'"
-          class="remote-status-pill"
-          :class="`remote-status-pill--${remoteSaveStatus}`"
-          role="status"
-          aria-live="polite"
-        >
-          <span>{{ remoteSaveStatusLabel }}</span>
-          <button v-if="remoteSaveStatus === 'error'" type="button" class="text-button" @click="retryRemoteStateSave">
-            Yritä uudelleen
-          </button>
-        </div>
-
         <footer v-if="activeTab === 'host' && isAdminMode" class="local-footer">
           <button type="button" class="text-button" @click="resetLocalState">
-            Nollaa paikallinen data
+            Nollaa kisadata kaikilta
           </button>
           <button type="button" class="text-button" @click="lockApp">
             Kirjaudu ulos
@@ -235,9 +226,12 @@ const now = ref(Date.now())
 const STATE_POLL_MS = Number(import.meta.env.VITE_KESAKISA_STATE_POLL_MS ?? 10000)
 const remoteSaveStatus = ref<RemoteSaveStatus>('idle')
 const remoteSaveError = ref('')
+const remoteSyncError = ref('')
+const lastRemoteSavedAt = ref<string | null>(null)
 let timer: number | undefined
 let statePollTimer: number | undefined
 let remoteSaveTimer: number | undefined
+let remoteSaveStatusTimer: number | undefined
 let skipNextLocalSave = false
 let isApplyingRemoteState = false
 let hasUnsavedRemoteState = false
@@ -270,29 +264,27 @@ const latestEndedDailyTask = computed(() => {
 })
 
 const participantDailyTask = computed(() => {
-  return liveDailyTask.value ?? upcomingDailyTasks.value[0] ?? latestEndedDailyTask.value ?? activeDailyTask.value
+  return activeDailyTask.value
 })
 
 const participantTaskStatus = computed<TaskStatus>(() => taskStatusFor(participantDailyTask.value))
 
 const taskStatus = computed<TaskStatus>(() => taskStatusFor(activeDailyTask.value))
 
-const nextPreviewDailyTask = computed(() => {
-  return upcomingDailyTasks.value.find(task => task.id !== participantDailyTask.value.id)
+const nextPreviewDailyTask = computed<DailyTask | undefined>(() => {
+  return undefined
 })
 
 const isScoringInProgress = computed(() => {
-  const taskToScore = latestEndedDailyTask.value
-
-  if (!taskToScore) {
+  if (participantTaskStatus.value !== 'ended') {
     return false
   }
 
-  return scoredTeamsForTask(taskToScore).size < state.value.teams.length
+  return scoredTeamsForTask(participantDailyTask.value).size < state.value.teams.length
 })
 
 const isFreeTime = computed(() => {
-  return !liveDailyTask.value && !upcomingDailyTasks.value.length && !!latestEndedDailyTask.value && !isScoringInProgress.value
+  return participantTaskStatus.value === 'ended' && !isScoringInProgress.value
 })
 
 const currentPlayer = computed(() => {
@@ -333,15 +325,17 @@ const participantDailyTips = computed(() => {
 
 const remoteSaveStatusLabel = computed(() => {
   if (remoteSaveStatus.value === 'saving') {
-    return 'Tallennetaan muutoksia'
+    return 'Julkaistaan muutoksia osallistujille'
   }
 
   if (remoteSaveStatus.value === 'saved') {
-    return 'Muutokset tallennettu'
+    return lastRemoteSavedAt.value
+      ? `Näkyy osallistujille klo ${formatStatusTime(lastRemoteSavedAt.value)}`
+      : 'Näkyy osallistujille'
   }
 
   if (remoteSaveStatus.value === 'error') {
-    return remoteSaveError.value || 'Tallennus epäonnistui'
+    return remoteSaveError.value || 'Julkaisu epäonnistui'
   }
 
   return ''
@@ -523,6 +517,10 @@ onBeforeUnmount(() => {
     window.clearTimeout(remoteSaveTimer)
   }
 
+  if (remoteSaveStatusTimer) {
+    window.clearTimeout(remoteSaveStatusTimer)
+  }
+
   window.removeEventListener('focus', handleWindowFocus)
   window.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('storage', syncStateFromStorage)
@@ -582,6 +580,13 @@ async function syncRemoteState (): Promise<void> {
   try {
     const result = await loadRemoteState(session.token)
 
+    if (result.error) {
+      remoteSyncError.value = result.error
+      return
+    }
+
+    remoteSyncError.value = ''
+
     if (result.state) {
       applyRemoteState(result.state)
       return
@@ -598,6 +603,9 @@ async function syncRemoteState (): Promise<void> {
       } else {
         remoteSaveStatus.value = 'saved'
         remoteSaveError.value = ''
+        remoteSyncError.value = ''
+        lastRemoteSavedAt.value = new Date().toISOString()
+        scheduleRemoteSaveStatusClear()
       }
     }
   } finally {
@@ -637,6 +645,7 @@ function scheduleRemoteStateSave (nextState: AppState): void {
   pendingRemoteState = cloneState(nextState)
   remoteSaveStatus.value = 'saving'
   remoteSaveError.value = ''
+  clearRemoteSaveStatusTimer()
 
   if (isRemoteSaveInFlight) {
     return
@@ -668,6 +677,7 @@ async function flushRemoteStateSave (): Promise<boolean> {
   isRemoteSaveInFlight = true
   remoteSaveStatus.value = 'saving'
   remoteSaveError.value = ''
+  clearRemoteSaveStatusTimer()
 
   const saveError = await saveRemoteState(stateToSave, session.token)
   isRemoteSaveInFlight = false
@@ -686,6 +696,9 @@ async function flushRemoteStateSave (): Promise<boolean> {
     hasUnsavedRemoteState = false
     remoteSaveStatus.value = 'saved'
     remoteSaveError.value = ''
+    remoteSyncError.value = ''
+    lastRemoteSavedAt.value = new Date().toISOString()
+    scheduleRemoteSaveStatusClear()
   }
 
   return true
@@ -697,6 +710,31 @@ function retryRemoteStateSave (): void {
 
 function cloneState (nextState: AppState): AppState {
   return JSON.parse(JSON.stringify(nextState)) as AppState
+}
+
+function scheduleRemoteSaveStatusClear (): void {
+  clearRemoteSaveStatusTimer()
+  remoteSaveStatusTimer = window.setTimeout(() => {
+    if (remoteSaveStatus.value === 'saved' && !hasUnsavedRemoteState) {
+      remoteSaveStatus.value = 'idle'
+    }
+
+    remoteSaveStatusTimer = undefined
+  }, 4500)
+}
+
+function clearRemoteSaveStatusTimer (): void {
+  if (remoteSaveStatusTimer) {
+    window.clearTimeout(remoteSaveStatusTimer)
+    remoteSaveStatusTimer = undefined
+  }
+}
+
+function formatStatusTime (value: string): string {
+  return new Date(value).toLocaleTimeString('fi-FI', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 function addScoreEvent (event: ScoreEvent): void {
@@ -801,16 +839,23 @@ function removeUserMessage (messageId: string): void {
 }
 
 function createDailyTask (task: DailyTask): void {
+  const hasActiveTask = state.value.dailyTasks.some(existingTask => existingTask.id === state.value.activeDailyTaskId)
+
   state.value.dailyTasks = [task, ...state.value.dailyTasks]
-  state.value.activeDailyTaskId = task.id
-  state.value.dailyTask = task
+
+  if (!hasActiveTask) {
+    state.value.activeDailyTaskId = task.id
+    state.value.dailyTask = task
+  }
+
   openPlayerTab('tehtava')
 }
 
 function updateDailyTask (task: DailyTask): void {
   state.value.dailyTasks = state.value.dailyTasks.map(existingTask => existingTask.id === task.id ? task : existingTask)
-  state.value.activeDailyTaskId = task.id
-  state.value.dailyTask = task
+  if (state.value.activeDailyTaskId === task.id) {
+    state.value.dailyTask = task
+  }
   openPlayerTab('tehtava')
 }
 
@@ -826,9 +871,14 @@ function removeDailyTask (taskId: string): void {
   state.value.scoreEvents = state.value.scoreEvents.filter(event => event.dailyTaskId !== taskId)
   state.value.dailyTips = state.value.dailyTips.filter(tip => tip.dailyTaskId !== taskId)
 
-  const fallbackTask = nextDailyTasks.length ? pickFallbackDailyTask(nextDailyTasks) : createEmptyDailyTask()
-  state.value.activeDailyTaskId = fallbackTask.id
-  state.value.dailyTask = fallbackTask
+  if (state.value.activeDailyTaskId === taskId) {
+    const fallbackTask = nextDailyTasks.length ? pickFallbackDailyTask(nextDailyTasks) : createEmptyDailyTask()
+    state.value.activeDailyTaskId = fallbackTask.id
+    state.value.dailyTask = fallbackTask
+  } else {
+    const activeTask = nextDailyTasks.find(item => item.id === state.value.activeDailyTaskId) ?? state.value.dailyTask
+    state.value.dailyTask = activeTask
+  }
   openPlayerTab('tehtava')
 }
 
@@ -884,7 +934,9 @@ function setMouseHidden (mouseId: MouseId): void {
 }
 
 function resetLocalState (): void {
-  if (!window.confirm('Nollataanko paikallinen data tässä selaimessa? Tätä ei voi kumota.')) {
+  const confirmation = window.prompt('Tämä nollaa kisadatan kaikilta osallistujilta. Kirjoita NOLLAA, jos haluat jatkaa.')
+
+  if (confirmation !== 'NOLLAA') {
     return
   }
 
@@ -898,7 +950,16 @@ function unlockApp (session: AccessSession): void {
   void syncRemoteState()
 }
 
-function lockApp (): void {
+async function lockApp (): Promise<void> {
+  if (isAdminMode && accessSession.value && hasUnsavedRemoteState) {
+    const didSave = await flushRemoteStateSave()
+
+    if (!didSave) {
+      window.alert('Muutoksia ei saatu julkaistua. Yritä uudelleen ennen uloskirjautumista.')
+      return
+    }
+  }
+
   clearAccessSession()
   accessSession.value = null
   activeTab.value = isAdminMode ? 'host' : 'etusivu'
@@ -913,7 +974,7 @@ async function verifyStoredAccess (): Promise<void> {
   isCheckingAccess.value = false
 
   if (!session) {
-    lockApp()
+    await lockApp()
     return
   }
 
@@ -932,21 +993,30 @@ function normalizePlayerName (name: string): string {
   return name.trim().toLocaleLowerCase('fi-FI')
 }
 
-function startTaskNow (): void {
+function startTaskNow (taskId?: string): void {
+  const task = taskId
+    ? state.value.dailyTasks.find(item => item.id === taskId) ?? activeDailyTask.value
+    : activeDailyTask.value
   const startsAt = new Date(Date.now() - 1000)
   const endsAt = new Date(Date.now() + 57 * 60 * 1000)
 
   updateDailyTask({
-    ...activeDailyTask.value,
+    ...task,
     startsAt: startsAt.toISOString(),
     endsAt: endsAt.toISOString()
   })
+  setActiveDailyTask(task.id)
 }
 
-function endTaskNow (): void {
+function endTaskNow (taskId?: string): void {
+  const task = taskId
+    ? state.value.dailyTasks.find(item => item.id === taskId) ?? activeDailyTask.value
+    : activeDailyTask.value
+
   updateDailyTask({
-    ...activeDailyTask.value,
+    ...task,
     endsAt: new Date(Date.now() - 1000).toISOString()
   })
+  setActiveDailyTask(task.id)
 }
 </script>

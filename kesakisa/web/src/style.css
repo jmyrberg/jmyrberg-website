@@ -1227,28 +1227,55 @@ button {
   background: rgba(45, 36, 38, .28);
 }
 
-.host-saving-pill {
-  position: absolute;
-  top: 42px;
-  right: 16px;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 5px 9px;
-  border: 1px solid rgba(45, 36, 38, .32);
-  border-radius: 999px;
-  background: var(--box-parent-bg);
-  color: var(--ink);
-  font-size: .72rem;
-  font-weight: 900;
-  line-height: 1;
-  box-shadow: 0 4px 0 rgba(45, 36, 38, .12);
-  pointer-events: none;
+.host-feedback-stack {
+  display: grid;
+  gap: 7px;
 }
 
-.host-saving-pill__spinner {
+.host-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid rgba(45, 36, 38, .28);
+  border-radius: 14px;
+  background: var(--box-parent-bg);
+  color: var(--ink);
+  font-family: var(--font-hand);
+  font-size: .86rem;
+  font-weight: 900;
+  line-height: 1.15;
+  box-shadow: 0 4px 0 rgba(45, 36, 38, .1);
+}
+
+.host-feedback > span {
+  min-width: 0;
+}
+
+.host-feedback .text-button {
+  flex: 0 0 auto;
+}
+
+.host-feedback--pending,
+.host-feedback--remote-saving {
+  background: #fff8dc;
+}
+
+.host-feedback--success,
+.host-feedback--remote-saved {
+  background: #dff1df;
+}
+
+.host-feedback--error,
+.host-feedback--remote-error {
+  background: #f7d7dc;
+}
+
+.host-feedback__spinner {
+  flex: 0 0 auto;
   width: 13px;
   height: 13px;
   border: 1px solid rgba(45, 36, 38, .24);

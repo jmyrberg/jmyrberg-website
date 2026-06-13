@@ -1,11 +1,38 @@
 <template>
   <section class="section-block host-panel" aria-label="Järjestäjä">
-    <div v-if="isHostBusy" class="host-saving-pill" role="status" aria-live="polite">
-      <span class="host-saving-pill__spinner" aria-hidden="true" />
-      <span>Tallennetaan</span>
-    </div>
-
     <div class="host-stack">
+      <div
+        v-if="hostFeedback || remoteStatusVisible || remoteSyncError"
+        class="host-feedback-stack"
+        aria-live="polite"
+      >
+        <div
+          v-if="hostFeedback"
+          class="host-feedback"
+          :class="`host-feedback--${hostFeedback.status}`"
+          role="status"
+        >
+          <span v-if="hostFeedback.status === 'pending'" class="host-feedback__spinner" aria-hidden="true" />
+          <span>{{ hostFeedback.message }}</span>
+        </div>
+
+        <div
+          v-if="remoteStatusVisible"
+          class="host-feedback"
+          :class="`host-feedback--remote-${remoteSaveStatus}`"
+          role="status"
+        >
+          <span>{{ remoteSaveMessage }}</span>
+          <button v-if="remoteSaveStatus === 'error'" type="button" class="text-button" @click="emit('retryRemoteSave')">
+            Yritä uudelleen
+          </button>
+        </div>
+
+        <div v-if="remoteSyncError" class="host-feedback host-feedback--error" role="status">
+          <span>{{ remoteSyncError }}</span>
+        </div>
+      </div>
+
       <span class="host-tab-label">Aihe</span>
       <div class="host-domain-tabs">
         <button
@@ -82,22 +109,31 @@
               :key="task.id"
               type="button"
               class="task-choice"
-              :class="{ 'task-choice--active': activeDailyTaskId === task.id }"
+              :class="{ 'task-choice--active': editableDailyTask.id === task.id }"
               @click="selectDailyTask(task)"
             >
               <strong>{{ task.title }}</strong>
-              <span>{{ formatDate(task.startsAt) }}</span>
+              <span>{{ formatDate(task.startsAt) }}<template v-if="activeDailyTaskId === task.id"> · Näkyy osallistujille</template></span>
             </button>
           </div>
         </div>
         <div class="task-summary">
-          <strong>{{ dailyTask.title }}</strong>
-          <span>{{ dailyTask.location }} · {{ formatDate(dailyTask.startsAt) }} - {{ formatClock(dailyTask.endsAt) }}</span>
+          <strong>{{ editableDailyTask.title }}</strong>
+          <span>{{ editableDailyTask.location }} · {{ formatDate(editableDailyTask.startsAt) }} - {{ formatClock(editableDailyTask.endsAt) }}</span>
+          <button
+            v-if="editableDailyTask.id !== activeDailyTaskId"
+            type="button"
+            class="pill-button"
+            :disabled="isHostBusy"
+            @click="publishSelectedDailyTask"
+          >
+            Näytä osallistujille
+          </button>
         </div>
-        <div v-if="canRemoveDailyTask(dailyTask)" class="host-subsection">
+        <div v-if="canRemoveDailyTask(editableDailyTask)" class="host-subsection">
           <h3>Poista tehtävä</h3>
           <p class="host-help">Voit poistaa valitun tehtävän riippumatta siitä, onko se tuleva, käynnissä vai päättynyt.</p>
-          <button type="button" class="pill-button pill-button--danger" :disabled="isHostBusy" @click="removeDailyTask(dailyTask.id)">
+          <button type="button" class="pill-button pill-button--danger" :disabled="isHostBusy" @click="removeDailyTask(editableDailyTask.id)">
             Poista tehtävä
           </button>
         </div>
@@ -627,10 +663,16 @@ import SubmissionForm from './SubmissionForm.vue'
 
 type HostDomain = 'paivatehtava' | 'hiiret' | 'pisteet' | 'viestit' | 'joukkueet' | 'pelaajat'
 type HostAction = 'luo' | 'hallinta' | 'tila' | 'vinkit' | 'lisaa' | 'muokkaa' | 'laheta'
+type HostFeedbackStatus = 'pending' | 'success' | 'error'
+type RemoteSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 type ScoreDraft = Partial<Pick<ScoreEvent, 'teamId' | 'category' | 'dailyTaskId' | 'title' | 'points' | 'description'>>
 type TeamDraft = Partial<Pick<Team, 'name' | 'accent'>>
 type PlayerDraft = Partial<Pick<Player, 'name' | 'teamId' | 'inviteCode'>>
+type HostFeedback = {
+  status: HostFeedbackStatus
+  message: string
+}
 
 const props = defineProps<{
   teams: Team[]
@@ -644,6 +686,9 @@ const props = defineProps<{
   userMessages: UserMessage[]
   foundMice: FoundMouse[]
   scoreEvents: ScoreEvent[]
+  remoteSaveStatus: RemoteSaveStatus
+  remoteSaveMessage: string
+  remoteSyncError: string
 }>()
 
 const emit = defineEmits<{
@@ -671,8 +716,9 @@ const emit = defineEmits<{
   setActiveDailyTask: [taskId: string]
   setMouseFound: [mouseId: MouseId, teamId: TeamId]
   setMouseHidden: [mouseId: MouseId]
-  startTaskNow: []
-  endTaskNow: []
+  startTaskNow: [taskId: string]
+  endTaskNow: [taskId: string]
+  retryRemoteSave: []
 }>()
 
 const mouseId = ref<MouseId>('white')
@@ -688,6 +734,7 @@ const latestPlayerInvite = ref<PlayerInvite | null>(null)
 const playerInviteError = ref('')
 const activeDomain = ref<HostDomain>('paivatehtava')
 const activeAction = ref<HostAction>('luo')
+const selectedDailyTaskId = ref(props.activeDailyTaskId)
 const dailyTaskDraft = reactive({
   title: '',
   location: '',
@@ -703,8 +750,10 @@ const mouseTipSelections = reactive<Record<string, MouseId>>({})
 const scoreDrafts = reactive<Record<string, ScoreDraft>>({})
 const teamDrafts = reactive<Record<string, TeamDraft>>({})
 const playerDrafts = reactive<Record<string, PlayerDraft>>({})
-const activeHostActivity = ref('')
-let activityTimeout: number | undefined
+const hostFeedback = ref<HostFeedback | null>(null)
+const isDailyTaskDraftDirty = ref(false)
+let feedbackTimeout: number | undefined
+let isSyncingDailyTaskDraft = false
 
 const domains: { id: HostDomain, label: string }[] = [
   { id: 'paivatehtava', label: 'Päivätehtävä' },
@@ -760,7 +809,7 @@ const sortedMouseTips = computed(() => {
 
 const sortedDailyTips = computed(() => {
   return props.dailyTips
-    .filter(tip => tip.dailyTaskId === props.dailyTask.id)
+    .filter(tip => tip.dailyTaskId === editableDailyTask.value.id)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 })
 
@@ -773,11 +822,15 @@ const sortedScoreEvents = computed(() => {
 })
 
 const currentActions = computed(() => actionsByDomain[activeDomain.value])
-const isHostBusy = computed(() => activeHostActivity.value !== '')
+const editableDailyTask = computed(() => {
+  return props.dailyTasks.find(task => task.id === selectedDailyTaskId.value) ?? props.dailyTask
+})
+const isHostBusy = computed(() => hostFeedback.value?.status === 'pending')
+const remoteStatusVisible = computed(() => props.remoteSaveStatus !== 'idle' && props.remoteSaveMessage !== '')
 
 onBeforeUnmount(() => {
-  if (activityTimeout) {
-    window.clearTimeout(activityTimeout)
+  if (feedbackTimeout) {
+    window.clearTimeout(feedbackTimeout)
   }
 })
 
@@ -787,19 +840,53 @@ watch(() => props.players.map(player => player.id).join('|'), () => {
   }
 })
 
+watch(() => props.dailyTasks.map(task => task.id).join('|'), () => {
+  if (!props.dailyTasks.some(task => task.id === selectedDailyTaskId.value)) {
+    selectedDailyTaskId.value = props.activeDailyTaskId
+  }
+})
+
+watch(() => props.activeDailyTaskId, taskId => {
+  if (!props.dailyTasks.some(task => task.id === selectedDailyTaskId.value)) {
+    selectedDailyTaskId.value = taskId
+  }
+})
+
 watch(
   () => [
-    props.dailyTask.id,
-    props.dailyTask.title,
-    props.dailyTask.location,
-    props.dailyTask.preparationText,
-    props.dailyTask.instructions,
-    props.dailyTask.startsAt,
-    props.dailyTask.endsAt
+    editableDailyTask.value.id,
+    editableDailyTask.value.title,
+    editableDailyTask.value.location,
+    editableDailyTask.value.preparationText,
+    editableDailyTask.value.instructions,
+    editableDailyTask.value.startsAt,
+    editableDailyTask.value.endsAt
+  ],
+  (nextTaskValues, previousTaskValues) => {
+    if (activeDomain.value === 'paivatehtava' && activeAction.value === 'hallinta') {
+      const didSwitchTask = nextTaskValues[0] !== previousTaskValues?.[0]
+
+      if (isDailyTaskDraftDirty.value && !didSwitchTask) {
+        return
+      }
+
+      syncDailyTaskDraft(editableDailyTask.value)
+    }
+  }
+)
+
+watch(
+  () => [
+    dailyTaskDraft.title,
+    dailyTaskDraft.location,
+    dailyTaskDraft.preparationText,
+    dailyTaskDraft.instructions,
+    dailyTaskStartDraft.value,
+    dailyTaskEndDraft.value
   ],
   () => {
-    if (activeDomain.value === 'paivatehtava' && activeAction.value === 'hallinta') {
-      syncDailyTaskDraft(props.dailyTask)
+    if (!isSyncingDailyTaskDraft && activeDomain.value === 'paivatehtava' && isDailyTaskDraftAction(activeAction.value)) {
+      isDailyTaskDraftDirty.value = true
     }
   }
 )
@@ -810,7 +897,7 @@ watch([activeDomain, activeAction], ([domain, action]) => {
   }
 
   if (action === 'hallinta') {
-    syncDailyTaskDraft(props.dailyTask)
+    syncDailyTaskDraft(editableDailyTask.value)
     return
   }
 
@@ -818,11 +905,23 @@ watch([activeDomain, activeAction], ([domain, action]) => {
 })
 
 function selectDomain (domain: HostDomain): void {
+  if (domain === activeDomain.value) {
+    return
+  }
+
+  if (!confirmDiscardDailyTaskDraft()) {
+    return
+  }
+
   activeDomain.value = domain
   activeAction.value = actionsByDomain[domain][0].id
 }
 
 function selectAction (action: HostAction): void {
+  if (action !== activeAction.value && !confirmDiscardDailyTaskDraft()) {
+    return
+  }
+
   activeAction.value = action
 }
 
@@ -843,7 +942,7 @@ function submitDailyTip (): void {
   runHostActivity('Julkaistaan päivävinkkiä', () => {
     emit('addDailyTip', {
       id: window.crypto?.randomUUID?.() ?? `daily-tip-${Date.now()}`,
-      dailyTaskId: props.dailyTask.id,
+      dailyTaskId: editableDailyTask.value.id,
       text: dailyTipText.value,
       createdAt: new Date().toISOString()
     })
@@ -870,30 +969,88 @@ function submitUserMessage (): void {
 }
 
 function createDailyTaskSetup (): void {
-  runHostActivity('Tallennetaan päivätehtävää', () => {
-    const task = dailyTaskFromDraft()
-    emit('createDailyTask', {
-      ...task,
-      id: window.crypto?.randomUUID?.() ?? `daily-task-${Date.now()}`
-    })
+  const validationError = validateDailyTaskDraft()
 
-    resetDailyTaskDraft()
-  })
+  if (validationError) {
+    showHostFeedback('error', validationError)
+    return
+  }
+
+  runHostActivity('Tallennetaan päivätehtävää', () => {
+    const task = {
+      ...dailyTaskFromDraft(),
+      id: window.crypto?.randomUUID?.() ?? `daily-task-${Date.now()}`
+    }
+
+    emit('createDailyTask', task)
+    selectedDailyTaskId.value = task.id
+    activeAction.value = 'hallinta'
+    syncDailyTaskDraft(task)
+  }, 'Päivätehtävä lisätty, ei vielä osallistujilla')
 }
 
 function submitDailyTaskSetup (): void {
+  const validationError = validateDailyTaskDraft()
+
+  if (validationError) {
+    showHostFeedback('error', validationError)
+    return
+  }
+
   runHostActivity('Tallennetaan muutoksia', () => {
     emit('updateDailyTask', dailyTaskFromDraft())
+    isDailyTaskDraftDirty.value = false
   })
+}
+
+function isDailyTaskDraftAction (action: HostAction): boolean {
+  return action === 'luo' || action === 'hallinta'
+}
+
+function confirmDiscardDailyTaskDraft (): boolean {
+  if (activeDomain.value !== 'paivatehtava' || !isDailyTaskDraftAction(activeAction.value) || !isDailyTaskDraftDirty.value) {
+    return true
+  }
+
+  if (!confirmAction('Hylätäänkö tallentamattomat muutokset päivätehtävästä?')) {
+    return false
+  }
+
+  isDailyTaskDraftDirty.value = false
+  return true
 }
 
 function canRemoveDailyTask (task: DailyTask): boolean {
   return props.dailyTasks.some(item => item.id === task.id)
 }
 
+function validateDailyTaskDraft (): string | null {
+  if (!dailyTaskDraft.title.trim()) {
+    return 'Päivätehtävän otsikko puuttuu.'
+  }
+
+  if (!dailyTaskDraft.location.trim()) {
+    return 'Päivätehtävän paikka puuttuu.'
+  }
+
+  if (!dailyTaskStartDraft.value || !dailyTaskEndDraft.value) {
+    return 'Päivätehtävän aloitus- ja lopetusaika puuttuvat.'
+  }
+
+  if (new Date(dailyTaskStartDraft.value).getTime() >= new Date(dailyTaskEndDraft.value).getTime()) {
+    return 'Lopetusajan pitää olla aloitusajan jälkeen.'
+  }
+
+  if (!dailyTaskDraft.preparationText.trim() || !dailyTaskDraft.instructions.trim()) {
+    return 'Päivätehtävän ohjetekstit puuttuvat.'
+  }
+
+  return null
+}
+
 function dailyTaskFromDraft (): DailyTask {
   return {
-    ...props.dailyTask,
+    ...editableDailyTask.value,
     title: dailyTaskDraft.title,
     location: dailyTaskDraft.location,
     preparationText: dailyTaskDraft.preparationText,
@@ -904,28 +1061,62 @@ function dailyTaskFromDraft (): DailyTask {
 }
 
 function selectDailyTask (task: DailyTask): void {
-  runHostActivity('Vaihdetaan päivätehtävää', () => {
-    emit('setActiveDailyTask', task.id)
-    syncDailyTaskDraft(task)
-  })
+  if (isDailyTaskDraftDirty.value && !confirmAction('Hylätäänkö tallentamattomat muutokset ja vaihdetaan tehtävää?')) {
+    return
+  }
+
+  selectedDailyTaskId.value = task.id
+  syncDailyTaskDraft(task)
+}
+
+function publishSelectedDailyTask (): void {
+  runHostActivity('Näytetään tehtävää osallistujille', () => {
+    saveDirtyDailyTaskDraftForLiveAction()
+    emit('setActiveDailyTask', editableDailyTask.value.id)
+  }, 'Tehtävä valittu osallistujille')
 }
 
 function syncDailyTaskDraft (task: DailyTask): void {
+  isSyncingDailyTaskDraft = true
   dailyTaskDraft.title = task.title
   dailyTaskDraft.location = task.location
   dailyTaskDraft.preparationText = task.preparationText
   dailyTaskDraft.instructions = task.instructions
   dailyTaskStartDraft.value = toDateTimeLocalValue(task.startsAt)
   dailyTaskEndDraft.value = toDateTimeLocalValue(task.endsAt)
+  isDailyTaskDraftDirty.value = false
+  window.setTimeout(() => {
+    isSyncingDailyTaskDraft = false
+  }, 0)
 }
 
 function resetDailyTaskDraft (): void {
+  isSyncingDailyTaskDraft = true
   dailyTaskDraft.title = ''
   dailyTaskDraft.location = ''
   dailyTaskDraft.preparationText = ''
   dailyTaskDraft.instructions = ''
   dailyTaskStartDraft.value = ''
   dailyTaskEndDraft.value = ''
+  isDailyTaskDraftDirty.value = false
+  window.setTimeout(() => {
+    isSyncingDailyTaskDraft = false
+  }, 0)
+}
+
+function saveDirtyDailyTaskDraftForLiveAction (): void {
+  if (!isDailyTaskDraftDirty.value) {
+    return
+  }
+
+  const validationError = validateDailyTaskDraft()
+
+  if (validationError) {
+    throw new Error(validationError)
+  }
+
+  emit('updateDailyTask', dailyTaskFromDraft())
+  isDailyTaskDraftDirty.value = false
 }
 
 function saveDailyTip (tip: DailyTip): void {
@@ -971,7 +1162,7 @@ function removeUserMessage (messageId: string): void {
 }
 
 function removeDailyTask (taskId: string): void {
-  if (!confirmAction(`Poistetaanko tehtävä "${props.dailyTask.title}"? Tehtävän pisteet ja päivävinkit poistuvat samalla.`)) {
+  if (!confirmAction(`Poistetaanko tehtävä "${editableDailyTask.value.title}"? Tehtävän pisteet ja päivävinkit poistuvat samalla.`)) {
     return
   }
 
@@ -1030,6 +1221,19 @@ function updateScoreTask (event: ScoreEvent, task: DailyTask): void {
 }
 
 function saveScore (event: ScoreEvent): void {
+  const title = scoreTitle(event).trim()
+  const points = scorePoints(event)
+
+  if (!title) {
+    showHostFeedback('error', 'Pistekirjauksen otsikko puuttuu.')
+    return
+  }
+
+  if (!Number.isFinite(points) || points < -100 || points > 100) {
+    showHostFeedback('error', 'Pisteiden pitää olla väliltä -100 ja 100.')
+    return
+  }
+
   runHostActivity('Tallennetaan pisteitä', () => {
     const category = scoreCategory(event)
 
@@ -1038,8 +1242,8 @@ function saveScore (event: ScoreEvent): void {
       teamId: scoreTeam(event),
       category,
       dailyTaskId: category === 'paivatehtava' ? scoreDailyTaskId(event) : undefined,
-      title: scoreTitle(event),
-      points: scorePoints(event),
+      title,
+      points,
       description: scoreDescription(event)
     })
 
@@ -1083,25 +1287,27 @@ function submitPlayer (): void {
 
   if (!nextPlayerName) {
     playerInviteError.value = 'Pelaajan nimi puuttuu.'
+    showHostFeedback('error', playerInviteError.value)
     return
   }
 
   if (props.players.some(player => normalizePlayerName(player.name) === normalizePlayerName(nextPlayerName))) {
     playerInviteError.value = 'Pelaaja on jo listalla.'
+    showHostFeedback('error', playerInviteError.value)
     return
   }
 
   runHostActivity('Luodaan pelaajakoodia', async () => {
     if (!props.accessToken) {
       playerInviteError.value = 'Järjestäjän kirjautuminen puuttuu.'
-      return
+      throw new Error(playerInviteError.value)
     }
 
     const result = await createPlayerInvite(nextPlayerName, props.accessToken)
 
     if (!result.invite) {
       playerInviteError.value = result.error ?? 'Pelaajakoodia ei voitu luoda.'
-      return
+      throw new Error(playerInviteError.value)
     }
 
     latestPlayerInvite.value = result.invite
@@ -1130,10 +1336,17 @@ function updatePlayerDraft (player: Player, draft: PlayerDraft): void {
 }
 
 function saveTeam (team: Team): void {
+  const nextName = teamDraftName(team).trim()
+
+  if (!nextName) {
+    showHostFeedback('error', 'Joukkueen nimi puuttuu.')
+    return
+  }
+
   runHostActivity('Tallennetaan joukkuetta', () => {
     emit('updateTeam', {
       ...team,
-      name: teamDraftName(team),
+      name: nextName,
       accent: teamDraftAccent(team)
     })
 
@@ -1148,11 +1361,13 @@ function savePlayer (player: Player): void {
 
   if (!nextName) {
     playerInviteError.value = 'Pelaajan nimi puuttuu.'
+    showHostFeedback('error', playerInviteError.value)
     return
   }
 
   if (hasDuplicatePlayerName(player, nextName)) {
     playerInviteError.value = 'Pelaaja on jo listalla.'
+    showHostFeedback('error', playerInviteError.value)
     return
   }
 
@@ -1175,25 +1390,27 @@ function regeneratePlayerInvite (player: Player): void {
 
   if (!nextName) {
     playerInviteError.value = 'Pelaajan nimi puuttuu.'
+    showHostFeedback('error', playerInviteError.value)
     return
   }
 
   if (hasDuplicatePlayerName(player, nextName)) {
     playerInviteError.value = 'Pelaaja on jo listalla.'
+    showHostFeedback('error', playerInviteError.value)
     return
   }
 
   runHostActivity('Luodaan pelaajakoodia', async () => {
     if (!props.accessToken) {
       playerInviteError.value = 'Järjestäjän kirjautuminen puuttuu.'
-      return
+      throw new Error(playerInviteError.value)
     }
 
     const result = await createPlayerInvite(nextName, props.accessToken, player.id)
 
     if (!result.invite) {
       playerInviteError.value = result.error ?? 'Pelaajakoodia ei voitu luoda.'
-      return
+      throw new Error(playerInviteError.value)
     }
 
     latestPlayerInvite.value = result.invite
@@ -1318,31 +1535,33 @@ function foundMouse (mouseId: MouseId): FoundMouse | undefined {
 
 function toggleMouse (mouseId: MouseId): void {
   runHostActivity('Tallennetaan hiiren tilaa', () => {
-    if (foundMouse(mouseId) || selectedMouseTeam.value === null) {
+    if (selectedMouseTeam.value === null) {
       emit('setMouseHidden', mouseId)
     } else {
       emit('setMouseFound', mouseId, selectedMouseTeam.value)
     }
-  })
+  }, selectedMouseTeam.value === null ? 'Hiiri merkitty piiloon' : 'Hiiren löytäjä päivitetty')
 }
 
 function startTaskNow (): void {
-  if (!confirmAction(`Aloitetaanko tehtävä "${props.dailyTask.title}" nyt? Ajastettu aloitus muuttuu.`)) {
+  if (!confirmAction(`Aloitetaanko tehtävä "${editableDailyTask.value.title}" nyt? Tehtävä näytetään samalla osallistujille.`)) {
     return
   }
 
   runHostActivity('Aloitetaan tehtävää', () => {
-    emit('startTaskNow')
+    saveDirtyDailyTaskDraftForLiveAction()
+    emit('startTaskNow', editableDailyTask.value.id)
   })
 }
 
 function endTaskNow (): void {
-  if (!confirmAction(`Lopetetaanko tehtävä "${props.dailyTask.title}" nyt? Tämä siirtää tehtävän päättyneeksi.`)) {
+  if (!confirmAction(`Lopetetaanko tehtävä "${editableDailyTask.value.title}" nyt? Tehtävä näytetään samalla osallistujille ja siirretään päättyneeksi.`)) {
     return
   }
 
   runHostActivity('Päätetään tehtävää', () => {
-    emit('endTaskNow')
+    saveDirtyDailyTaskDraftForLiveAction()
+    emit('endTaskNow', editableDailyTask.value.id)
   })
 }
 
@@ -1350,27 +1569,53 @@ function confirmAction (message: string): boolean {
   return window.confirm(message)
 }
 
-function runHostActivity (label: string, activity: () => void | Promise<void>): void {
+function runHostActivity (label: string, activity: () => void | Promise<void>, successMessage = 'Muutos tehty'): void {
   if (isHostBusy.value) {
     return
   }
 
-  if (activityTimeout) {
-    window.clearTimeout(activityTimeout)
-  }
+  clearHostFeedbackTimer()
 
-  activeHostActivity.value = label
+  hostFeedback.value = {
+    status: 'pending',
+    message: label
+  }
   const startedAt = Date.now()
 
   void Promise.resolve()
     .then(activity)
-    .finally(() => {
+    .then(() => {
       const remainingMs = Math.max(0, 520 - (Date.now() - startedAt))
 
-      activityTimeout = window.setTimeout(() => {
-        activeHostActivity.value = ''
+      feedbackTimeout = window.setTimeout(() => {
+        showHostFeedback('success', successMessage, 2600)
       }, remainingMs)
     })
+    .catch(error => {
+      showHostFeedback('error', error instanceof Error ? error.message : 'Toiminto epäonnistui.', 6500)
+    })
+}
+
+function showHostFeedback (status: HostFeedbackStatus, message: string, timeoutMs = 4500): void {
+  clearHostFeedbackTimer()
+  hostFeedback.value = {
+    status,
+    message
+  }
+
+  if (status !== 'pending') {
+    feedbackTimeout = window.setTimeout(() => {
+      hostFeedback.value = null
+      feedbackTimeout = undefined
+    }, timeoutMs)
+  }
+}
+
+function clearHostFeedbackTimer (): void {
+  if (feedbackTimeout) {
+    window.clearTimeout(feedbackTimeout)
+    feedbackTimeout = undefined
+  }
 }
 
 function teamName (teamId: TeamId | undefined): string {
