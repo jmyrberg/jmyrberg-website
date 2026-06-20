@@ -83,6 +83,7 @@
         <ScoreBoard
           v-else-if="activeTab === 'pisteet'"
           :teams="state.teams"
+          :players="state.players"
           :events="state.scoreEvents"
           :player-team-id="currentPlayerTeamId"
         />
@@ -1013,7 +1014,8 @@ function createEmptyDailyTask (): DailyTask {
     startsAt: timestamp,
     endsAt: timestamp,
     preparationText: 'Lisää uusi päivätehtävä järjestäjänäkymässä.',
-    instructions: 'Päivätehtävää ei ole vielä lisätty.'
+    instructions: 'Päivätehtävää ei ole vielä lisätty.',
+    guidanceVisible: false
   }
 }
 

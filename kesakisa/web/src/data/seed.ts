@@ -95,8 +95,9 @@ function createInitialDailyTask (): DailyTask {
     location: 'olohuoneessa',
     startsAt: startsAt.toISOString(),
     endsAt: endsAt.toISOString(),
-    preparationText: 'Olkaa koko joukkue paikalla, kun lähtölaskenta päättyy. Ohjeet avautuvat vasta aloitushetkellä.',
-    instructions: 'Rakentakaa joukkueellenne kesäinen tunnus. Lopputuloksessa pitää näkyä joukkueen nimi, värit ja vähintään yksi salainen yksityiskohta. Kun aika loppuu, työ pysähtyy ja host kirjaa pisteet.'
+    preparationText: 'Olkaa koko joukkue paikalla, kun lähtölaskenta päättyy. Ohjeet avataan järjestäjän merkistä.',
+    instructions: 'Rakentakaa joukkueellenne kesäinen tunnus. Lopputuloksessa pitää näkyä joukkueen nimi, värit ja vähintään yksi salainen yksityiskohta. Kun aika loppuu, työ pysähtyy ja host kirjaa pisteet.',
+    guidanceVisible: false
   }
 }
 

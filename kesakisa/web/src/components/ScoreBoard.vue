@@ -10,7 +10,10 @@
       >
         <div class="score-team__title" :style="{ '--team-accent': row.team.accent }">
           <span class="score-team__rank">#{{ row.rank }}</span>
-          <h2>{{ row.team.name }}</h2>
+          <span class="score-team__name">
+            <h2>{{ row.team.name }}</h2>
+            <small v-if="row.memberNames">{{ row.memberNames }}</small>
+          </span>
           <strong>{{ row.total }}p</strong>
         </div>
 
@@ -50,12 +53,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { ScoreEvent, Team, TeamId } from '../types'
+import type { Player, ScoreEvent, Team, TeamId } from '../types'
 import { formatShortDateTime as formatDate } from '../utils/dateFormat'
 import { scoreCategoryLabel } from '../utils/score'
 
 const props = defineProps<{
   teams: Team[]
+  players: Player[]
   events: ScoreEvent[]
   playerTeamId?: TeamId
 }>()
@@ -72,6 +76,10 @@ const scoreRows = computed(() => {
     events: props.events
       .filter(event => event.teamId === team.id)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    memberNames: props.players
+      .filter(player => player.teamId === team.id)
+      .map(player => player.name)
+      .join(', '),
     rank: 1
   }))
     .sort((a, b) => b.total - a.total || a.originalIndex - b.originalIndex)

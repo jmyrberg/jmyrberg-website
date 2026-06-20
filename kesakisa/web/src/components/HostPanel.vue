@@ -44,7 +44,7 @@
         @submit.prevent="createDailyTaskSetup"
       >
         <h2>Lisää päivätehtävä</h2>
-        <p class="host-help">Syötä tehtävän sisältö ja aikataulu yhdessä paikassa. Ohjeet avautuvat osallistujille vasta aloitushetkellä.</p>
+        <p class="host-help">Syötä tehtävän sisältö ja aikataulu yhdessä paikassa. Ohjeet näkyvät osallistujille vasta, kun järjestäjä avaa ne käsiohjauksesta.</p>
         <label>
           Otsikko
           <input v-model.trim="dailyTaskDraft.title" required maxlength="48" />
@@ -66,7 +66,7 @@
           <textarea v-model.trim="dailyTaskDraft.preparationText" rows="3" required />
         </label>
         <label>
-          Aloituksessa avautuvat ohjeet
+          Osallistujille avattavat ohjeet
           <textarea v-model.trim="dailyTaskDraft.instructions" rows="5" required />
         </label>
         <button type="submit" class="primary-button" :disabled="isHostBusy">
@@ -115,13 +115,24 @@
 
         <div class="host-subsection">
           <h3>Käsiohjaus</h3>
-          <p class="host-help">Aloita tehtävä käsin tai päätä se ennen ajastinta.</p>
+          <p class="host-help">{{ dailyTaskControlSummary }}</p>
           <div class="quick-actions">
-            <button type="button" class="pill-button" :disabled="isHostBusy" @click="startTaskNow">
-              Aloita nyt
+            <button
+              type="button"
+              class="pill-button"
+              :class="{ 'pill-button--danger': editableDailyTaskStatus === 'live' }"
+              :disabled="isHostBusy || !canControlDailyTask(editableDailyTask)"
+              @click="toggleTaskTiming"
+            >
+              {{ taskTimingActionLabel }}
             </button>
-            <button type="button" class="pill-button pill-button--danger" :disabled="isHostBusy" @click="endTaskNow">
-              Lopeta nyt
+            <button
+              type="button"
+              class="pill-button"
+              :disabled="isHostBusy || !canToggleDailyTaskGuidance"
+              @click="toggleGuidanceVisibility"
+            >
+              {{ guidanceActionLabel }}
             </button>
           </div>
         </div>
@@ -150,7 +161,7 @@
               <textarea v-model.trim="dailyTaskDraft.preparationText" rows="3" required />
             </label>
             <label>
-              Aloituksessa avautuvat ohjeet
+              Osallistujille avattavat ohjeet
               <textarea v-model.trim="dailyTaskDraft.instructions" rows="5" required />
             </label>
             <button type="submit" class="primary-button" :disabled="isHostBusy">
@@ -631,8 +642,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import type { DailyTask, DailyTip, FoundMouse, MouseId, MouseTip, Player, ScoreCategory, ScoreEvent, Team, TeamId, UserMessage } from '../types'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import type { DailyTask, DailyTip, FoundMouse, MouseId, MouseTip, Player, ScoreCategory, ScoreEvent, TaskStatus, Team, TeamId, UserMessage } from '../types'
 import { createPlayerInvite, type PlayerInvite } from '../services/accessGate'
 import { formatClock, formatShortDateTime as formatDate } from '../utils/dateFormat'
 import { dailyTaskScoreKey, defaultDailyTaskId, pointOptions, scoreCategoryLabel, scoreCategoryOptions, scoreDefaultsForCategory, teamNameForScore, validateScoreEvent } from '../utils/score'
@@ -732,7 +743,9 @@ const teamDrafts = reactive<Record<string, TeamDraft>>({})
 const playerDrafts = reactive<Record<string, PlayerDraft>>({})
 const hostFeedback = ref<HostFeedback | null>(null)
 const isDailyTaskDraftDirty = ref(false)
+const now = ref(Date.now())
 let feedbackTimeout: number | undefined
+let taskStatusTimer: number | undefined
 let isSyncingDailyTaskDraft = false
 
 const domains: { id: HostDomain, label: string }[] = [
@@ -798,10 +811,45 @@ const editableDailyTask = computed(() => {
   return props.dailyTasks.find(task => task.id === selectedDailyTaskId.value) ?? props.dailyTask
 })
 const isHostBusy = computed(() => hostFeedback.value?.status === 'pending')
+const editableDailyTaskStatus = computed<TaskStatus>(() => taskStatusFor(editableDailyTask.value))
+const editableDailyTaskIsPublished = computed(() => editableDailyTask.value.id === props.activeDailyTaskId)
+const editableDailyTaskCanShowGuidance = computed(() => editableDailyTaskIsPublished.value && editableDailyTaskStatus.value !== 'upcoming')
+const canToggleDailyTaskGuidance = computed(() => canControlDailyTask(editableDailyTask.value) && editableDailyTaskCanShowGuidance.value)
+const taskTimingActionLabel = computed(() => editableDailyTaskStatus.value === 'live' ? 'Lopeta nyt' : 'Aloita nyt')
+const guidanceIsVisibleToParticipants = computed(() => editableDailyTaskCanShowGuidance.value && editableDailyTask.value.guidanceVisible)
+const guidanceActionLabel = computed(() => guidanceIsVisibleToParticipants.value ? 'Piilota ohjeet' : 'Näytä ohjeet')
+const dailyTaskControlSummary = computed(() => {
+  if (!canControlDailyTask(editableDailyTask.value)) {
+    return 'Valitse päivätehtävä käsiohjausta varten.'
+  }
+
+  const taskState = editableDailyTaskStatus.value === 'live'
+    ? 'Tehtävä on käynnissä'
+    : editableDailyTaskStatus.value === 'upcoming'
+      ? 'Tehtävä ei ole vielä käynnissä'
+      : 'Tehtävä on päättynyt'
+  const guidanceState = guidanceVisibilitySummary(
+    editableDailyTask.value,
+    editableDailyTaskStatus.value,
+    editableDailyTaskIsPublished.value
+  )
+
+  return `${taskState} ja ${guidanceState}.`
+})
+
+onMounted(() => {
+  taskStatusTimer = window.setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+})
 
 onBeforeUnmount(() => {
   if (feedbackTimeout) {
     window.clearTimeout(feedbackTimeout)
+  }
+
+  if (taskStatusTimer) {
+    window.clearInterval(taskStatusTimer)
   }
 
   emit('hostFeedbackChange', null)
@@ -956,7 +1004,8 @@ function createDailyTaskSetup (): void {
   runHostActivity('Tallennetaan päivätehtävää', () => {
     const task = {
       ...dailyTaskFromDraft(),
-      id: window.crypto?.randomUUID?.() ?? `daily-task-${Date.now()}`
+      id: window.crypto?.randomUUID?.() ?? `daily-task-${Date.now()}`,
+      guidanceVisible: false
     }
 
     emit('createDailyTask', task)
@@ -999,6 +1048,26 @@ function confirmDiscardDailyTaskDraft (): boolean {
 
 function canRemoveDailyTask (task: DailyTask): boolean {
   return props.dailyTasks.some(item => item.id === task.id)
+}
+
+function canControlDailyTask (task: DailyTask): boolean {
+  return props.dailyTasks.some(item => item.id === task.id)
+}
+
+function guidanceVisibilitySummary (task: DailyTask, status: TaskStatus, isPublished: boolean): string {
+  if (!isPublished) {
+    return 'ohjeet eivät näy osallistujille, koska tehtävää ei ole valittu näkyviin'
+  }
+
+  if (status === 'upcoming') {
+    return task.guidanceVisible
+      ? 'ohjeet avautuvat, kun tehtävä aloitetaan'
+      : 'ohjeet ovat piilossa osallistujilta'
+  }
+
+  return task.guidanceVisible
+    ? 'ohjeet näkyvät osallistujille'
+    : 'ohjeet ovat piilossa osallistujilta'
 }
 
 function validateDailyTaskDraft (): string | null {
@@ -1595,7 +1664,45 @@ function toggleMouse (mouseId: MouseId): void {
   }, selectedMouseTeam.value === null ? 'Hiiri merkitty piiloon' : 'Hiiren löytäjä päivitetty')
 }
 
+function toggleTaskTiming (): void {
+  if (editableDailyTaskStatus.value === 'live') {
+    endTaskNow()
+    return
+  }
+
+  startTaskNow()
+}
+
+function toggleGuidanceVisibility (): void {
+  if (!canToggleDailyTaskGuidance.value) {
+    return
+  }
+
+  const guidanceVisible = !guidanceIsVisibleToParticipants.value
+
+  runHostActivity(guidanceVisible ? 'Näytetään ohjeita' : 'Piilotetaan ohjeita', () => {
+    const validationError = isDailyTaskDraftDirty.value ? validateDailyTaskDraft() : null
+
+    if (validationError) {
+      throw new Error(validationError)
+    }
+
+    const task = isDailyTaskDraftDirty.value ? dailyTaskFromDraft() : editableDailyTask.value
+
+    emit('updateDailyTask', {
+      ...task,
+      guidanceVisible
+    })
+
+    isDailyTaskDraftDirty.value = false
+  }, guidanceVisible ? 'Ohjeet näkyvät osallistujille' : 'Ohjeet piilotettu osallistujilta')
+}
+
 function startTaskNow (): void {
+  if (!canControlDailyTask(editableDailyTask.value)) {
+    return
+  }
+
   if (!confirmAction(`Aloitetaanko tehtävä "${editableDailyTask.value.title}" nyt? Tehtävä näytetään samalla osallistujille.`)) {
     return
   }
@@ -1607,6 +1714,10 @@ function startTaskNow (): void {
 }
 
 function endTaskNow (): void {
+  if (!canControlDailyTask(editableDailyTask.value)) {
+    return
+  }
+
   if (!confirmAction(`Lopetetaanko tehtävä "${editableDailyTask.value.title}" nyt? Tehtävä näytetään samalla osallistujille ja siirretään päättyneeksi.`)) {
     return
   }
@@ -1615,6 +1726,21 @@ function endTaskNow (): void {
     saveDirtyDailyTaskDraftForLiveAction()
     emit('endTaskNow', editableDailyTask.value.id)
   })
+}
+
+function taskStatusFor (task: DailyTask): TaskStatus {
+  const startsAt = new Date(task.startsAt).getTime()
+  const endsAt = new Date(task.endsAt).getTime()
+
+  if (now.value < startsAt) {
+    return 'upcoming'
+  }
+
+  if (now.value <= endsAt) {
+    return 'live'
+  }
+
+  return 'ended'
 }
 
 function confirmAction (message: string): boolean {

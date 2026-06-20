@@ -62,6 +62,7 @@ export interface DailyTask {
   endsAt: string
   preparationText: string
   instructions: string
+  guidanceVisible: boolean
 }
 
 export interface AppState {

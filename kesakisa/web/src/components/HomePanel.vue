@@ -23,7 +23,7 @@
             aria-label="Avaa pisteet"
             @click="$emit('navigate', 'pisteet')"
           >
-            <strong>Pisteiden kirjaus käynnissä</strong>
+            <strong>Pisteiden kirjaus käynnissä.</strong>
           </button>
           <CountdownTimer
             v-else
@@ -139,8 +139,8 @@ const mice: MouseAsset[] = [
 ]
 
 const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt)
-const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa' : 'Päivätehtävä käynnissä')
-const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt' : 'Päivätehtävä päättyi')
+const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa.' : 'Päivätehtävä käynnissä.')
+const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt.' : 'Päivätehtävä päättyi.')
 const dailyTaskSummary = computed(() => {
   if (props.scoringInProgress) {
     return 'Tuomaristo laskee, hengitä hetki.'
@@ -152,7 +152,7 @@ const dailyTaskSummary = computed(() => {
 
   const summaryByStatus: Record<TaskStatus, string> = {
     upcoming: upcomingTaskSummary.value,
-    live: 'Nyt mennään - ohjeet on avattu',
+    live: liveTaskSummary.value,
     ended: 'Päättynyt tehtävä on paketissa.'
   }
 
@@ -170,7 +170,11 @@ const upcomingTaskSummary = computed(() => {
   return 'Kerää joukkue kasaan ennen lähtölaukausta.'
 })
 const freeTimeMessage = 'Ei tehtävää käynnissä - nauti mökkiajasta ja pidä silmät auki.'
-const mouseSummary = computed(() => hiddenMouseCount.value > 0 ? 'Hiiriä on piilossa' : 'Kaikki hiiret on löydetty')
+const liveTaskSummary = computed(() => props.task.guidanceVisible
+  ? 'Nyt mennään - ohjeet on avattu.'
+  : 'Kokoonnutaan paikalle - ohjeet avataan järjestäjän merkistä.'
+)
+const mouseSummary = computed(() => hiddenMouseCount.value > 0 ? 'Hiiriä on piilossa.' : 'Kaikki hiiret on löydetty.')
 const hiddenMouseCount = computed(() => mice.length - props.foundMice.length)
 const scoreRows = computed(() => {
   const rows = props.teams.map((team, index) => ({

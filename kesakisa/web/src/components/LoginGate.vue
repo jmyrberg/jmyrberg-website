@@ -10,8 +10,8 @@
       <div v-if="requiredRole === 'player'" class="login-countdown">
         <CountdownTimer
           :target-at="competitionStartsAt"
-          label="Kesäkisa alkaa 21.6. klo 00.00"
-          finished-label="Kesäkisa on alkanut"
+          label="Kesäkisa alkaa 21.6. klo 00.00."
+          finished-label="Kesäkisa on alkanut."
           :as-button="false"
         />
       </div>
@@ -55,6 +55,7 @@ const code = ref('')
 const errorText = ref('')
 const isSubmitting = ref(false)
 const competitionStartsAt = '2026-06-21T00:00:00+03:00'
+const invalidCodeMessage = 'Hups, koodi meni väärään mökkiin. Tarkista koodi ja kokeile uudestaan.'
 
 const title = computed(() => props.requiredRole === 'admin' ? 'Järjestäjän koodi' : 'Pelaajakoodi')
 const helpText = computed(() => props.requiredRole === 'admin'
@@ -70,10 +71,18 @@ async function submitCode (): Promise<void> {
   isSubmitting.value = false
 
   if (!result.session) {
-    errorText.value = result.error ?? 'Koodi ei kelpaa tähän näkymään.'
+    errorText.value = loginErrorMessage(result.error)
     return
   }
 
   emit('unlock', result.session)
+}
+
+function loginErrorMessage (error: string | null): string {
+  if (!error || error === 'Invalid code' || error === 'Koodia ei voitu vahvistaa.') {
+    return invalidCodeMessage
+  }
+
+  return error
 }
 </script>

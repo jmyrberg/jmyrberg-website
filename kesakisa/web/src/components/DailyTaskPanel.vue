@@ -47,17 +47,27 @@
         <div v-if="status === 'upcoming'" key="locked" class="task-lock">
           <strong class="task-panel__box-title">Tehtävän ohje</strong>
           <strong>Ohjeet ovat vielä lukossa.</strong>
-          <span>Ne avautuvat automaattisesti, kun päivätehtävä alkaa.</span>
+          <span>{{ task.guidanceVisible ? 'Ne avautuvat, kun päivätehtävä alkaa.' : 'Ne avataan järjestäjän merkistä.' }}</span>
         </div>
-        <div v-else-if="status === 'live'" key="live" class="task-instructions">
+        <div v-else-if="status === 'live' && task.guidanceVisible" key="live" class="task-instructions">
           <strong class="task-panel__box-title">Tehtävän ohje</strong>
           <p>{{ task.instructions }}</p>
         </div>
-        <div v-else key="ended" class="task-instructions task-instructions--ended">
+        <div v-else-if="status === 'live'" key="waiting" class="task-lock">
+          <strong class="task-panel__box-title">Tehtävän ohje</strong>
+          <strong>Ohjeet avataan järjestäjän merkistä.</strong>
+          <span>Kuuntele ensin yhteinen alustus. Ohjeet ilmestyvät tähän, kun järjestäjä näyttää ne.</span>
+        </div>
+        <div v-else-if="task.guidanceVisible" key="ended" class="task-instructions task-instructions--ended">
           <strong class="task-panel__box-title">Tehtävän ohje</strong>
           <strong>Aika on päättynyt.</strong>
           <p>{{ task.instructions }}</p>
           <p>Tehtävään ei tehdä enää muutoksia. Järjestäjä lisää pisteet pistetaulukkoon.</p>
+        </div>
+        <div v-else key="ended-hidden" class="task-lock">
+          <strong class="task-panel__box-title">Tehtävän ohje</strong>
+          <strong>Aika on päättynyt.</strong>
+          <span>Ohjeet eivät ole näkyvissä osallistujille.</span>
         </div>
       </transition>
     </section>
@@ -105,8 +115,8 @@ const sortedDailyTips = computed(() => {
 
 const hasPublishedTask = computed(() => props.hasTask)
 const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt)
-const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa' : 'Päivätehtävä käynnissä')
-const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt' : 'Päivätehtävä päättyi')
+const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa.' : 'Päivätehtävä käynnissä.')
+const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt.' : 'Päivätehtävä päättyi.')
 const timeLeftLabel = computed(() => props.status === 'upcoming' ? 'Seuraavan tehtävän alkuun' : 'Aikaa jäljellä')
 const taskMetaHeading = computed(() => {
   if (props.status === 'upcoming') {

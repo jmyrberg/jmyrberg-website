@@ -20,9 +20,9 @@ export function loadState (): AppState {
 }
 
 export function normalizeState (state: Partial<AppState>, fallback = createInitialState()): AppState {
-  const parsedDailyTask = state.dailyTask ? { ...fallback.dailyTask, ...state.dailyTask } : fallback.dailyTask
+  const parsedDailyTask = normalizeDailyTask(state.dailyTask, fallback.dailyTask)
   const dailyTasks = Array.isArray(state.dailyTasks)
-    ? state.dailyTasks
+    ? state.dailyTasks.map(task => normalizeDailyTask(task, fallback.dailyTask))
     : [parsedDailyTask]
   const activeDailyTaskId = state.activeDailyTaskId && dailyTasks.some(task => task.id === state.activeDailyTaskId)
     ? state.activeDailyTaskId
@@ -53,6 +53,20 @@ export function normalizeState (state: Partial<AppState>, fallback = createIniti
     userMessagesSeenAtByPlayerId: isStringRecord(state.userMessagesSeenAtByPlayerId)
       ? state.userMessagesSeenAtByPlayerId
       : fallback.userMessagesSeenAtByPlayerId
+  }
+}
+
+function normalizeDailyTask (value: unknown, fallback: DailyTask): DailyTask {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return fallback
+  }
+
+  const candidate = value as Partial<DailyTask>
+
+  return {
+    ...fallback,
+    ...candidate,
+    guidanceVisible: typeof candidate.guidanceVisible === 'boolean' ? candidate.guidanceVisible : false
   }
 }
 

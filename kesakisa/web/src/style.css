@@ -769,6 +769,22 @@ button {
   text-align: left;
 }
 
+.score-team__name {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.score-team__name small {
+  display: block;
+  color: rgba(45, 36, 38, .56);
+  font-family: var(--font-hand);
+  font-size: .66rem;
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
 .score-team__title strong {
   display: inline-grid;
   min-width: 64px;

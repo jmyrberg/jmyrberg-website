@@ -21,7 +21,7 @@
         </span>
         <span class="host-status-dock__copy">
           <strong>{{ statusItem.title }}</strong>
-          <span>{{ statusItem.message }}</span>
+          <span>{{ statusMessage }}</span>
         </span>
         <button
           v-if="statusItem.canRetry"
@@ -128,6 +128,7 @@ const statusItem = computed<StatusItem | null>(() => {
 
 const hasError = computed(() => statusItem.value?.tone === 'error')
 const primaryTone = computed<StatusTone>(() => statusItem.value?.tone ?? 'pending')
+const statusMessage = computed(() => sentenceLine(statusItem.value?.message ?? ''))
 
 function titleForHostFeedback (status: HostFeedbackStatus): string {
   if (status === 'pending') {
@@ -155,5 +156,15 @@ function iconForHostFeedback (status: HostFeedbackStatus): string {
   }
 
   return ''
+}
+
+function sentenceLine (message: string): string {
+  const trimmedMessage = message.trim()
+
+  if (!trimmedMessage || /[.!?]$/.test(trimmedMessage)) {
+    return trimmedMessage
+  }
+
+  return `${trimmedMessage}.`
 }
 </script>

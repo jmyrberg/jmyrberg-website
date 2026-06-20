@@ -21,6 +21,7 @@ from flask import Request, Response
 
 
 DEFAULT_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
+INVALID_CODE_MESSAGE = "Hups, koodi meni väärään mökkiin. Tarkista koodi ja kokeile uudestaan."
 DEFAULT_INVITES = [
     {"name": "Jesse", "label": "Jesse", "playerId": "jesse", "role": "player"},
     {"name": "Jenni", "label": "Jenni", "playerId": "jenni", "role": "player"},
@@ -38,7 +39,7 @@ def kesakisa_api(request: Request) -> Response:
 
     try:
         if not _edge_request_allowed(request):
-            return _json_response({"status": "error", "message": "Not found"}, 404, cors_headers)
+            return _json_response({"status": "error", "message": "Sivua ei löytynyt."}, 404, cors_headers)
 
         path = request.path.rstrip("/") or "/"
 
@@ -60,11 +61,11 @@ def kesakisa_api(request: Request) -> Response:
         if request.method == "GET" and path.endswith("/me"):
             return _me(request, cors_headers)
 
-        return _json_response({"status": "error", "message": "Not found"}, 404, cors_headers)
+        return _json_response({"status": "error", "message": "Sivua ei löytynyt."}, 404, cors_headers)
     except AuthConfigurationError as error:
         return _json_response({"status": "error", "message": str(error)}, 500, cors_headers)
     except Exception:
-        return _json_response({"status": "error", "message": "Unexpected auth error"}, 500, cors_headers)
+        return _json_response({"status": "error", "message": "Kirjautumisessa tapahtui odottamaton virhe."}, 500, cors_headers)
 
 
 def _login(request: Request, cors_headers: dict[str, str]) -> Response:
@@ -74,7 +75,7 @@ def _login(request: Request, cors_headers: dict[str, str]) -> Response:
     invite = _invite_for_code(code)
 
     if not invite or not _can_access(required_role, invite["role"]):
-        return _json_response({"status": "error", "message": "Invalid code"}, 401, cors_headers)
+        return _json_response({"status": "error", "message": INVALID_CODE_MESSAGE}, 401, cors_headers)
 
     session = _create_session(invite)
     return _json_response({"status": "success", "data": session}, 200, cors_headers)
@@ -84,12 +85,12 @@ def _me(request: Request, cors_headers: dict[str, str]) -> Response:
     token = _bearer_token(request)
 
     if not token:
-        return _json_response({"status": "error", "message": "Missing session"}, 401, cors_headers)
+        return _json_response({"status": "error", "message": "Kirjautuminen puuttuu."}, 401, cors_headers)
 
     session = _verify_session(token)
 
     if not session:
-        return _json_response({"status": "error", "message": "Invalid session"}, 401, cors_headers)
+        return _json_response({"status": "error", "message": "Kirjautuminen ei ole enää voimassa."}, 401, cors_headers)
 
     return _json_response({"status": "success", "data": session}, 200, cors_headers)
 
@@ -98,13 +99,13 @@ def _invite_code_response(request: Request, cors_headers: dict[str, str]) -> Res
     admin_session = _verified_session_from_request(request)
 
     if not admin_session or admin_session["role"] != "admin":
-        return _json_response({"status": "error", "message": "Admin session required"}, 403, cors_headers)
+        return _json_response({"status": "error", "message": "Järjestäjän kirjautuminen vaaditaan."}, 403, cors_headers)
 
     payload = request.get_json(silent=True) or {}
     name = str(payload.get("name", "")).strip()
 
     if not name:
-        return _json_response({"status": "error", "message": "Name is required"}, 400, cors_headers)
+        return _json_response({"status": "error", "message": "Nimi puuttuu."}, 400, cors_headers)
 
     requested_player_id = str(payload.get("playerId", "")).strip()
     player_id = _player_id_from_label(requested_player_id or name)
@@ -123,7 +124,7 @@ def _state_response(request: Request, cors_headers: dict[str, str]) -> Response:
     session = _verified_session_from_request(request)
 
     if not session:
-        return _json_response({"status": "error", "message": "Session required"}, 401, cors_headers)
+        return _json_response({"status": "error", "message": "Kirjautuminen vaaditaan."}, 401, cors_headers)
 
     return _json_response(
         {"status": "success", "data": {"state": _load_game_state()}},
@@ -136,13 +137,13 @@ def _save_state_response(request: Request, cors_headers: dict[str, str]) -> Resp
     session = _verified_session_from_request(request)
 
     if not session or session["role"] != "admin":
-        return _json_response({"status": "error", "message": "Admin session required"}, 403, cors_headers)
+        return _json_response({"status": "error", "message": "Järjestäjän kirjautuminen vaaditaan."}, 403, cors_headers)
 
     payload = request.get_json(silent=True) or {}
     state = payload.get("state")
 
     if not isinstance(state, dict):
-        return _json_response({"status": "error", "message": "State object is required"}, 400, cors_headers)
+        return _json_response({"status": "error", "message": "Pelitila puuttuu."}, 400, cors_headers)
 
     _save_game_state(state)
     return _json_response(
