@@ -217,6 +217,7 @@ import { clearAccessSession, loadAccessSession, saveAccessSession, validateAcces
 import { loadRemoteState, saveRemoteState } from './services/gameStateApi'
 import { loadState, resetState, saveState, STORAGE_KEY } from './services/localStore'
 import type { AppState, DailyTask, DailyTip, MouseId, MouseTip, Player, ScoreEvent, TaskStatus, Team, TeamId, UserMessage } from './types'
+import { hasTaskAnnouncementStarted } from './utils/dailyTaskTime'
 import { dailyTaskScoreKey, normalizeScoreEvent } from './utils/score'
 
 type TabId = 'etusivu' | 'tehtava' | 'pisteet' | 'hiiret' | 'saannot' | 'viestit' | 'host'
@@ -292,13 +293,16 @@ const participantDailyTask = computed(() => {
 
 const hasParticipantDailyTask = computed(() => {
   const task = participantDailyTask.value
+  const status = taskStatusFor(task)
   const isActiveSelection = state.value.activeDailyTaskId === task.id
-  const isCurrentOrPlanned = taskStatusFor(task) !== 'ended'
+  const isCurrentOrPlanned = status !== 'ended'
+  const isAnnouncementVisible = status !== 'upcoming' || hasTaskAnnouncementStarted(task.announcementStartsAt, now.value)
 
   return task.id !== EMPTY_DAILY_TASK_ID &&
     hasValidDailyTaskTiming(task) &&
     state.value.dailyTasks.some(item => item.id === task.id) &&
-    (isActiveSelection || isCurrentOrPlanned)
+    (isActiveSelection || isCurrentOrPlanned) &&
+    isAnnouncementVisible
 })
 
 const participantTaskStatus = computed<TaskStatus>(() => taskStatusFor(participantDailyTask.value))
@@ -1011,6 +1015,7 @@ function createEmptyDailyTask (): DailyTask {
     id: EMPTY_DAILY_TASK_ID,
     title: 'Ei päivätehtävää',
     location: 'Ei paikkaa',
+    announcementStartsAt: timestamp,
     startsAt: timestamp,
     endsAt: timestamp,
     preparationText: 'Lisää uusi päivätehtävä järjestäjänäkymässä.',

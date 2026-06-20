@@ -1,4 +1,5 @@
 import type { AppState, DailyTask, DailyTip, MouseTip, Player, ScoreEvent, Team, UserMessage } from '../types'
+import { defaultTaskAnnouncementStartsAt } from '../utils/dailyTaskTime'
 
 export const teams: Team[] = [
   {
@@ -93,6 +94,7 @@ function createInitialDailyTask (): DailyTask {
     id: 'day-1',
     title: 'Päivätehtävä',
     location: 'olohuoneessa',
+    announcementStartsAt: defaultTaskAnnouncementStartsAt(startsAt.toISOString()),
     startsAt: startsAt.toISOString(),
     endsAt: endsAt.toISOString(),
     preparationText: 'Olkaa koko joukkue paikalla, kun lähtölaskenta päättyy. Ohjeet avataan järjestäjän merkistä.',

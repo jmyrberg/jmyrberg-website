@@ -58,6 +58,7 @@ export interface DailyTask {
   id: string
   title: string
   location: string
+  announcementStartsAt: string
   startsAt: string
   endsAt: string
   preparationText: string

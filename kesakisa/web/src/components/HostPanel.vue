@@ -58,6 +58,10 @@
           <input v-model="dailyTaskStartDraft" type="datetime-local" required />
         </label>
         <label>
+          Näkyy pelaajille alkaen
+          <input v-model="dailyTaskAnnouncementDraft" type="datetime-local" required />
+        </label>
+        <label>
           Lopetusaika
           <input v-model="dailyTaskEndDraft" type="datetime-local" required />
         </label>
@@ -88,13 +92,13 @@
               @click="selectDailyTask(task)"
             >
               <strong>{{ task.title }}</strong>
-              <span>{{ formatDate(task.startsAt) }}<template v-if="activeDailyTaskId === task.id"> · Näkyy osallistujille</template></span>
+              <span>{{ formatDate(task.startsAt) }}<template v-if="activeDailyTaskId === task.id"> · Valittu pelaajille</template></span>
             </button>
           </div>
         </div>
         <div class="task-summary">
           <strong>{{ editableDailyTask.title }}</strong>
-          <span>{{ editableDailyTask.location }} · {{ formatDate(editableDailyTask.startsAt) }} - {{ formatClock(editableDailyTask.endsAt) }}</span>
+          <span>{{ editableDailyTask.location }} · {{ formatDate(editableDailyTask.startsAt) }} - {{ formatClock(editableDailyTask.endsAt) }} · Pelaajille {{ formatDate(editableDailyTask.announcementStartsAt) }} alkaen</span>
           <button
             v-if="editableDailyTask.id !== activeDailyTaskId"
             type="button"
@@ -102,7 +106,7 @@
             :disabled="isHostBusy"
             @click="publishSelectedDailyTask"
           >
-            Näytä osallistujille
+            Valitse tehtäväksi
           </button>
         </div>
         <div v-if="canRemoveDailyTask(editableDailyTask)" class="host-subsection">
@@ -151,6 +155,10 @@
             <label>
               Aloitusaika
               <input v-model="dailyTaskStartDraft" type="datetime-local" required />
+            </label>
+            <label>
+              Näkyy pelaajille alkaen
+              <input v-model="dailyTaskAnnouncementDraft" type="datetime-local" required />
             </label>
             <label>
               Lopetusaika
@@ -646,6 +654,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import type { DailyTask, DailyTip, FoundMouse, MouseId, MouseTip, Player, ScoreCategory, ScoreEvent, TaskStatus, Team, TeamId, UserMessage } from '../types'
 import { createPlayerInvite, type PlayerInvite } from '../services/accessGate'
 import { formatClock, formatShortDateTime as formatDate } from '../utils/dateFormat'
+import { defaultTaskAnnouncementStartsAt, hasTaskAnnouncementStarted } from '../utils/dailyTaskTime'
 import { dailyTaskScoreKey, defaultDailyTaskId, pointOptions, scoreCategoryLabel, scoreCategoryOptions, scoreDefaultsForCategory, teamNameForScore, validateScoreEvent } from '../utils/score'
 import mouseBlack from '../assets/mouse-black.svg'
 import mouseBlackFound from '../assets/mouse-black-found.svg'
@@ -733,6 +742,7 @@ const dailyTaskDraft = reactive({
   instructions: ''
 })
 const dailyTaskStartDraft = ref('')
+const dailyTaskAnnouncementDraft = ref('')
 const dailyTaskEndDraft = ref('')
 const dailyDrafts = reactive<Record<string, string>>({})
 const mouseDrafts = reactive<Record<string, string>>({})
@@ -747,6 +757,7 @@ const now = ref(Date.now())
 let feedbackTimeout: number | undefined
 let taskStatusTimer: number | undefined
 let isSyncingDailyTaskDraft = false
+let lastSuggestedDailyTaskAnnouncement = ''
 
 const domains: { id: HostDomain, label: string }[] = [
   { id: 'paivatehtava', label: 'Päivätehtävä' },
@@ -833,8 +844,13 @@ const dailyTaskControlSummary = computed(() => {
     editableDailyTaskStatus.value,
     editableDailyTaskIsPublished.value
   )
+  const announcementState = announcementVisibilitySummary(
+    editableDailyTask.value,
+    editableDailyTaskStatus.value,
+    editableDailyTaskIsPublished.value
+  )
 
-  return `${taskState} ja ${guidanceState}.`
+  return `${taskState}, ${announcementState}, ja ${guidanceState}.`
 })
 
 onMounted(() => {
@@ -884,6 +900,7 @@ watch(
     editableDailyTask.value.location,
     editableDailyTask.value.preparationText,
     editableDailyTask.value.instructions,
+    editableDailyTask.value.announcementStartsAt,
     editableDailyTask.value.startsAt,
     editableDailyTask.value.endsAt
   ],
@@ -906,6 +923,7 @@ watch(
     dailyTaskDraft.location,
     dailyTaskDraft.preparationText,
     dailyTaskDraft.instructions,
+    dailyTaskAnnouncementDraft.value,
     dailyTaskStartDraft.value,
     dailyTaskEndDraft.value
   ],
@@ -915,6 +933,24 @@ watch(
     }
   }
 )
+
+watch(dailyTaskStartDraft, startValue => {
+  if (isSyncingDailyTaskDraft || activeDomain.value !== 'paivatehtava' || !isDailyTaskDraftAction(activeAction.value)) {
+    return
+  }
+
+  const nextSuggestion = defaultAnnouncementDraftValue(startValue)
+
+  if (!nextSuggestion) {
+    return
+  }
+
+  if (!dailyTaskAnnouncementDraft.value || dailyTaskAnnouncementDraft.value === lastSuggestedDailyTaskAnnouncement) {
+    dailyTaskAnnouncementDraft.value = nextSuggestion
+  }
+
+  lastSuggestedDailyTaskAnnouncement = nextSuggestion
+})
 
 watch([activeDomain, activeAction], ([domain, action]) => {
   if (domain !== 'paivatehtava') {
@@ -1054,6 +1090,20 @@ function canControlDailyTask (task: DailyTask): boolean {
   return props.dailyTasks.some(item => item.id === task.id)
 }
 
+function announcementVisibilitySummary (task: DailyTask, status: TaskStatus, isPublished: boolean): string {
+  if (!isPublished) {
+    return 'lähtölaskenta ei näy osallistujille, koska tehtävää ei ole valittu näkyviin'
+  }
+
+  if (status === 'upcoming') {
+    return hasTaskAnnouncementStarted(task.announcementStartsAt, now.value)
+      ? 'lähtölaskenta näkyy osallistujille'
+      : `lähtölaskenta näkyy osallistujille ${formatDate(task.announcementStartsAt)} alkaen`
+  }
+
+  return 'tehtävä näkyy osallistujille'
+}
+
 function guidanceVisibilitySummary (task: DailyTask, status: TaskStatus, isPublished: boolean): string {
   if (!isPublished) {
     return 'ohjeet eivät näy osallistujille, koska tehtävää ei ole valittu näkyviin'
@@ -1079,8 +1129,12 @@ function validateDailyTaskDraft (): string | null {
     return 'Päivätehtävän paikka puuttuu.'
   }
 
-  if (!dailyTaskStartDraft.value || !dailyTaskEndDraft.value) {
-    return 'Päivätehtävän aloitus- ja lopetusaika puuttuvat.'
+  if (!dailyTaskStartDraft.value || !dailyTaskAnnouncementDraft.value || !dailyTaskEndDraft.value) {
+    return 'Päivätehtävän näyttö-, aloitus- ja lopetusaika puuttuvat.'
+  }
+
+  if (new Date(dailyTaskAnnouncementDraft.value).getTime() > new Date(dailyTaskStartDraft.value).getTime()) {
+    return 'Näyttöajan pitää olla viimeistään aloitushetkellä.'
   }
 
   if (new Date(dailyTaskStartDraft.value).getTime() >= new Date(dailyTaskEndDraft.value).getTime()) {
@@ -1101,6 +1155,7 @@ function dailyTaskFromDraft (): DailyTask {
     location: dailyTaskDraft.location,
     preparationText: dailyTaskDraft.preparationText,
     instructions: dailyTaskDraft.instructions,
+    announcementStartsAt: fromDateTimeLocalValue(dailyTaskAnnouncementDraft.value),
     startsAt: fromDateTimeLocalValue(dailyTaskStartDraft.value),
     endsAt: fromDateTimeLocalValue(dailyTaskEndDraft.value)
   }
@@ -1116,10 +1171,10 @@ function selectDailyTask (task: DailyTask): void {
 }
 
 function publishSelectedDailyTask (): void {
-  runHostActivity('Näytetään tehtävää osallistujille', () => {
+  runHostActivity('Valitaan tehtävää pelaajille', () => {
     saveDirtyDailyTaskDraftForLiveAction()
     emit('setActiveDailyTask', editableDailyTask.value.id)
-  }, 'Tehtävä valittu osallistujille')
+  }, `Tehtävä valittu. Lähtölaskenta näkyy ${formatDate(editableDailyTask.value.announcementStartsAt)} alkaen`)
 }
 
 function syncDailyTaskDraft (task: DailyTask): void {
@@ -1128,8 +1183,10 @@ function syncDailyTaskDraft (task: DailyTask): void {
   dailyTaskDraft.location = task.location
   dailyTaskDraft.preparationText = task.preparationText
   dailyTaskDraft.instructions = task.instructions
+  dailyTaskAnnouncementDraft.value = toDateTimeLocalValue(task.announcementStartsAt)
   dailyTaskStartDraft.value = toDateTimeLocalValue(task.startsAt)
   dailyTaskEndDraft.value = toDateTimeLocalValue(task.endsAt)
+  lastSuggestedDailyTaskAnnouncement = defaultAnnouncementDraftValue(dailyTaskStartDraft.value)
   isDailyTaskDraftDirty.value = false
   window.setTimeout(() => {
     isSyncingDailyTaskDraft = false
@@ -1142,8 +1199,10 @@ function resetDailyTaskDraft (): void {
   dailyTaskDraft.location = ''
   dailyTaskDraft.preparationText = ''
   dailyTaskDraft.instructions = ''
+  dailyTaskAnnouncementDraft.value = ''
   dailyTaskStartDraft.value = ''
   dailyTaskEndDraft.value = ''
+  lastSuggestedDailyTaskAnnouncement = ''
   isDailyTaskDraftDirty.value = false
   window.setTimeout(() => {
     isSyncingDailyTaskDraft = false
@@ -1816,6 +1875,14 @@ function toDateTimeLocalValue (value: string): string {
   const date = new Date(value)
   const offsetMs = date.getTimezoneOffset() * 60 * 1000
   return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+}
+
+function defaultAnnouncementDraftValue (startsAt: string): string {
+  if (!startsAt) {
+    return ''
+  }
+
+  return toDateTimeLocalValue(defaultTaskAnnouncementStartsAt(fromDateTimeLocalValue(startsAt)))
 }
 
 function fromDateTimeLocalValue (value: string): string {

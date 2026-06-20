@@ -1,5 +1,6 @@
 import { createInitialState } from '../data/seed'
 import type { AppState, ScoreCategory, ScoreEvent, Team, DailyTask } from '../types'
+import { defaultTaskAnnouncementStartsAt } from '../utils/dailyTaskTime'
 import { normalizeScoreEvent, scoreCategoryOptions } from '../utils/score'
 
 export const STORAGE_KEY = 'kesakisa-2026-local-state-v1'
@@ -62,10 +63,15 @@ function normalizeDailyTask (value: unknown, fallback: DailyTask): DailyTask {
   }
 
   const candidate = value as Partial<DailyTask>
+  const announcementStartsAt = typeof candidate.announcementStartsAt === 'string' &&
+    Number.isFinite(new Date(candidate.announcementStartsAt).getTime())
+    ? candidate.announcementStartsAt
+    : defaultTaskAnnouncementStartsAt(candidate.startsAt ?? fallback.startsAt)
 
   return {
     ...fallback,
     ...candidate,
+    announcementStartsAt,
     guidanceVisible: typeof candidate.guidanceVisible === 'boolean' ? candidate.guidanceVisible : false
   }
 }
