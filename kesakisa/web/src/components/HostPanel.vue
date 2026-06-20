@@ -100,13 +100,13 @@
           <strong>{{ editableDailyTask.title }}</strong>
           <span>{{ editableDailyTask.location }} · {{ formatDate(editableDailyTask.startsAt) }} - {{ formatClock(editableDailyTask.endsAt) }} · Pelaajille {{ formatDate(editableDailyTask.announcementStartsAt) }} alkaen</span>
           <button
-            v-if="editableDailyTask.id !== activeDailyTaskId"
+            v-if="canShowDailyTaskToPlayersNow"
             type="button"
             class="pill-button"
             :disabled="isHostBusy"
             @click="publishSelectedDailyTask"
           >
-            Valitse tehtäväksi
+            Näytä osallistujille
           </button>
         </div>
         <div v-if="canRemoveDailyTask(editableDailyTask)" class="host-subsection">
@@ -829,6 +829,13 @@ const canToggleDailyTaskGuidance = computed(() => canControlDailyTask(editableDa
 const taskTimingActionLabel = computed(() => editableDailyTaskStatus.value === 'live' ? 'Lopeta nyt' : 'Aloita nyt')
 const guidanceIsVisibleToParticipants = computed(() => editableDailyTaskCanShowGuidance.value && editableDailyTask.value.guidanceVisible)
 const guidanceActionLabel = computed(() => guidanceIsVisibleToParticipants.value ? 'Piilota ohjeet' : 'Näytä ohjeet')
+const editableDailyTaskAnnouncementIsVisible = computed(() => {
+  return editableDailyTaskIsPublished.value &&
+    (editableDailyTaskStatus.value !== 'upcoming' || hasTaskAnnouncementStarted(editableDailyTask.value.announcementStartsAt, now.value))
+})
+const canShowDailyTaskToPlayersNow = computed(() => {
+  return canControlDailyTask(editableDailyTask.value) && !editableDailyTaskAnnouncementIsVisible.value
+})
 const dailyTaskControlSummary = computed(() => {
   if (!canControlDailyTask(editableDailyTask.value)) {
     return 'Valitse päivätehtävä käsiohjausta varten.'
@@ -1171,10 +1178,23 @@ function selectDailyTask (task: DailyTask): void {
 }
 
 function publishSelectedDailyTask (): void {
-  runHostActivity('Valitaan tehtävää pelaajille', () => {
-    saveDirtyDailyTaskDraftForLiveAction()
-    emit('setActiveDailyTask', editableDailyTask.value.id)
-  }, `Tehtävä valittu. Lähtölaskenta näkyy ${formatDate(editableDailyTask.value.announcementStartsAt)} alkaen`)
+  runHostActivity('Näytetään tehtävää osallistujille', () => {
+    const validationError = isDailyTaskDraftDirty.value ? validateDailyTaskDraft() : null
+
+    if (validationError) {
+      throw new Error(validationError)
+    }
+
+    const task = isDailyTaskDraftDirty.value ? dailyTaskFromDraft() : editableDailyTask.value
+    const announcementStartsAt = new Date().toISOString()
+
+    emit('updateDailyTask', {
+      ...task,
+      announcementStartsAt
+    })
+    isDailyTaskDraftDirty.value = false
+    emit('setActiveDailyTask', task.id)
+  }, 'Tehtävä näkyy osallistujille nyt')
 }
 
 function syncDailyTaskDraft (task: DailyTask): void {
