@@ -54,12 +54,12 @@
           <input v-model.trim="dailyTaskDraft.location" required maxlength="60" />
         </label>
         <label>
-          Aloitusaika
-          <input v-model="dailyTaskStartDraft" type="datetime-local" required />
-        </label>
-        <label>
           Näkyy pelaajille alkaen
           <input v-model="dailyTaskAnnouncementDraft" type="datetime-local" required />
+        </label>
+        <label>
+          Aloitusaika
+          <input v-model="dailyTaskStartDraft" type="datetime-local" required />
         </label>
         <label>
           Lopetusaika
@@ -153,12 +153,12 @@
               <input v-model.trim="dailyTaskDraft.location" required maxlength="60" />
             </label>
             <label>
-              Aloitusaika
-              <input v-model="dailyTaskStartDraft" type="datetime-local" required />
-            </label>
-            <label>
               Näkyy pelaajille alkaen
               <input v-model="dailyTaskAnnouncementDraft" type="datetime-local" required />
+            </label>
+            <label>
+              Aloitusaika
+              <input v-model="dailyTaskStartDraft" type="datetime-local" required />
             </label>
             <label>
               Lopetusaika
