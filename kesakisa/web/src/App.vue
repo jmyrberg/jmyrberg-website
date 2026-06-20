@@ -75,6 +75,7 @@
           v-else-if="activeTab === 'tehtava'"
           :task="participantDailyTask"
           :status="participantTaskStatus"
+          :has-task="hasParticipantDailyTask"
           :next-task="nextPreviewDailyTask"
           :daily-tips="participantDailyTips"
         />
@@ -225,6 +226,7 @@ type HostFeedback = {
   message: string
 }
 
+const EMPTY_DAILY_TASK_ID = 'empty-daily-task'
 const tabs: { id: TabId, label: string, icon: string }[] = [
   { id: 'etusivu', label: 'Etusivu', icon: bucketBlack },
   { id: 'tehtava', label: 'Tehtävä', icon: bucketRed },
@@ -263,7 +265,8 @@ const patternStyle = computed(() => ({
 }))
 
 const activeDailyTask = computed(() => {
-  return state.value.dailyTasks.find(task => task.id === state.value.activeDailyTaskId) ?? state.value.dailyTask
+  return state.value.dailyTasks.find(task => task.id === state.value.activeDailyTaskId) ??
+    pickFallbackDailyTask(state.value.dailyTasks)
 })
 
 const sortedDailyTasks = computed(() => {
@@ -286,6 +289,17 @@ const participantDailyTask = computed(() => {
   return activeDailyTask.value
 })
 
+const hasParticipantDailyTask = computed(() => {
+  const task = participantDailyTask.value
+  const isActiveSelection = state.value.activeDailyTaskId === task.id
+  const isCurrentOrPlanned = taskStatusFor(task) !== 'ended'
+
+  return task.id !== EMPTY_DAILY_TASK_ID &&
+    hasValidDailyTaskTiming(task) &&
+    state.value.dailyTasks.some(item => item.id === task.id) &&
+    (isActiveSelection || isCurrentOrPlanned)
+})
+
 const participantTaskStatus = computed<TaskStatus>(() => taskStatusFor(participantDailyTask.value))
 
 const taskStatus = computed<TaskStatus>(() => taskStatusFor(activeDailyTask.value))
@@ -295,7 +309,7 @@ const nextPreviewDailyTask = computed<DailyTask | undefined>(() => {
 })
 
 const isScoringInProgress = computed(() => {
-  if (participantTaskStatus.value !== 'ended') {
+  if (!hasParticipantDailyTask.value || participantTaskStatus.value !== 'ended' || state.value.teams.length === 0) {
     return false
   }
 
@@ -303,6 +317,10 @@ const isScoringInProgress = computed(() => {
 })
 
 const isFreeTime = computed(() => {
+  if (!hasParticipantDailyTask.value) {
+    return true
+  }
+
   return participantTaskStatus.value === 'ended' && !isScoringInProgress.value
 })
 
@@ -339,6 +357,10 @@ const playerUserMessages = computed(() => {
 })
 
 const participantDailyTips = computed(() => {
+  if (!hasParticipantDailyTask.value) {
+    return []
+  }
+
   return state.value.dailyTips.filter(tip => tip.dailyTaskId === participantDailyTask.value.id)
 })
 
@@ -492,6 +514,13 @@ function taskStatusFor (task: DailyTask): TaskStatus {
   }
 
   return 'ended'
+}
+
+function hasValidDailyTaskTiming (task: DailyTask): boolean {
+  const startsAt = new Date(task.startsAt).getTime()
+  const endsAt = new Date(task.endsAt).getTime()
+
+  return Number.isFinite(startsAt) && Number.isFinite(endsAt) && startsAt < endsAt
 }
 
 watch(state, nextState => {
@@ -936,7 +965,7 @@ function removeDailyTask (taskId: string): void {
   state.value.dailyTips = state.value.dailyTips.filter(tip => tip.dailyTaskId !== taskId)
 
   if (state.value.activeDailyTaskId === taskId) {
-    const fallbackTask = nextDailyTasks.length ? pickFallbackDailyTask(nextDailyTasks) : createEmptyDailyTask()
+    const fallbackTask = pickReplacementDailyTask(nextDailyTasks) ?? createEmptyDailyTask()
     state.value.activeDailyTaskId = fallbackTask.id
     state.value.dailyTask = fallbackTask
   } else {
@@ -963,14 +992,22 @@ function pickFallbackDailyTask (tasks: DailyTask[]): DailyTask {
   const endedTask = [...sortedTasks].reverse().find(task => taskStatusFor(task) === 'ended')
   const liveTask = sortedTasks.find(task => taskStatusFor(task) === 'live')
 
-  return upcomingTask ?? endedTask ?? liveTask ?? state.value.dailyTask
+  return liveTask ?? upcomingTask ?? endedTask ?? state.value.dailyTask
+}
+
+function pickReplacementDailyTask (tasks: DailyTask[]): DailyTask | undefined {
+  const sortedTasks = [...tasks].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+  const liveTask = sortedTasks.find(task => taskStatusFor(task) === 'live')
+  const upcomingTask = sortedTasks.find(task => taskStatusFor(task) === 'upcoming')
+
+  return liveTask ?? upcomingTask
 }
 
 function createEmptyDailyTask (): DailyTask {
   const timestamp = new Date(Date.now() - 1000).toISOString()
 
   return {
-    id: 'empty-daily-task',
+    id: EMPTY_DAILY_TASK_ID,
     title: 'Ei päivätehtävää',
     location: 'Ei paikkaa',
     startsAt: timestamp,

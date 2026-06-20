@@ -1,5 +1,15 @@
 <template>
-  <section class="section-block task-panel" aria-label="Päivätehtävä">
+  <section v-if="!hasPublishedTask" class="section-block task-panel" aria-label="Päivätehtävä">
+    <section class="task-panel__section" aria-label="Ei päivätehtävää">
+      <div class="task-lock">
+        <strong class="task-panel__box-title">Ei päivätehtävää</strong>
+        <strong>Tehtävää ei ole käynnissä.</strong>
+        <span>Järjestäjä julkaisee seuraavan päivätehtävän, kun sen aika tulee.</span>
+      </div>
+    </section>
+  </section>
+
+  <section v-else class="section-block task-panel" aria-label="Päivätehtävä">
     <section class="task-panel__section" aria-label="Tehtävän aika ja paikka">
       <div class="task-panel__meta">
         <strong class="task-panel__box-title">{{ taskMetaHeading }}</strong>
@@ -79,17 +89,21 @@ import type { DailyTask, DailyTip, TaskStatus } from '../types'
 import { formatClock as formatTime, formatWeekdayDateTime as formatDate } from '../utils/dateFormat'
 import CountdownTimer from './CountdownTimer.vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   task: DailyTask
   status: TaskStatus
+  hasTask?: boolean
   nextTask?: DailyTask
   dailyTips: DailyTip[]
-}>()
+}>(), {
+  hasTask: true
+})
 
 const sortedDailyTips = computed(() => {
   return [...props.dailyTips].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 })
 
+const hasPublishedTask = computed(() => props.hasTask)
 const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt)
 const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa' : 'Päivätehtävä käynnissä')
 const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt' : 'Päivätehtävä päättyi')
