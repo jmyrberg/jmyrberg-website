@@ -60,7 +60,7 @@ export interface DailyTask {
   location: string
   announcementStartsAt: string
   startsAt: string
-  endsAt: string
+  endsAt?: string
   preparationText: string
   instructions: string
   guidanceVisible: boolean

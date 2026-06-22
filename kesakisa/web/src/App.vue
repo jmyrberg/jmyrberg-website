@@ -508,10 +508,14 @@ function openInbox (): void {
 
 function taskStatusFor (task: DailyTask): TaskStatus {
   const startsAt = new Date(task.startsAt).getTime()
-  const endsAt = new Date(task.endsAt).getTime()
+  const endsAt = task.endsAt ? new Date(task.endsAt).getTime() : Number.NaN
 
   if (now.value < startsAt) {
     return 'upcoming'
+  }
+
+  if (!Number.isFinite(endsAt)) {
+    return 'live'
   }
 
   if (now.value <= endsAt) {
@@ -523,9 +527,9 @@ function taskStatusFor (task: DailyTask): TaskStatus {
 
 function hasValidDailyTaskTiming (task: DailyTask): boolean {
   const startsAt = new Date(task.startsAt).getTime()
-  const endsAt = new Date(task.endsAt).getTime()
+  const endsAt = task.endsAt ? new Date(task.endsAt).getTime() : Number.NaN
 
-  return Number.isFinite(startsAt) && Number.isFinite(endsAt) && startsAt < endsAt
+  return Number.isFinite(startsAt) && (!task.endsAt || (Number.isFinite(endsAt) && startsAt < endsAt))
 }
 
 watch(state, nextState => {
@@ -1106,12 +1110,16 @@ function startTaskNow (taskId?: string): void {
     ? state.value.dailyTasks.find(item => item.id === taskId) ?? activeDailyTask.value
     : activeDailyTask.value
   const startsAt = new Date(Date.now() - 1000)
-  const endsAt = new Date(Date.now() + 57 * 60 * 1000)
+  const plannedStartsAt = new Date(task.startsAt).getTime()
+  const plannedEndsAt = task.endsAt ? new Date(task.endsAt).getTime() : Number.NaN
+  const durationMs = Number.isFinite(plannedStartsAt) && Number.isFinite(plannedEndsAt) && plannedEndsAt > plannedStartsAt
+    ? plannedEndsAt - plannedStartsAt
+    : undefined
 
   updateDailyTask({
     ...task,
     startsAt: startsAt.toISOString(),
-    endsAt: endsAt.toISOString()
+    endsAt: durationMs ? new Date(startsAt.getTime() + durationMs).toISOString() : undefined
   })
   setActiveDailyTask(task.id)
 }

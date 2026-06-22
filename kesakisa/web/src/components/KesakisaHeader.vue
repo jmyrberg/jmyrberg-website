@@ -33,7 +33,7 @@
       </strong>
     </div>
     <CountdownTimer
-      v-else-if="showCountdown"
+      v-else-if="showCountdown && hasCountdownTarget"
       :target-at="targetAt"
       :label="countdownLabel"
       :finished-label="finishedLabel"
@@ -41,6 +41,15 @@
       aria-label="Avaa päivätehtävä"
       @click="emit('openTask')"
     />
+    <button
+      v-else-if="showCountdown"
+      type="button"
+      class="countdown countdown--scoring"
+      aria-label="Avaa päivätehtävä"
+      @click="emit('openTask')"
+    >
+      <strong>Päivätehtävä käynnissä.</strong>
+    </button>
   </header>
 </template>
 
@@ -68,7 +77,8 @@ const emit = defineEmits<{
   openTask: []
 }>()
 
-const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt)
+const hasCountdownTarget = computed(() => props.status === 'upcoming' || Boolean(props.task.endsAt))
+const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt ?? props.task.startsAt)
 const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa.' : 'Päivätehtävä käynnissä.')
 const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt.' : 'Päivätehtävä päättyi.')
 </script>

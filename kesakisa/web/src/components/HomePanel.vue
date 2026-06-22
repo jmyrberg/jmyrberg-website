@@ -25,6 +25,15 @@
           >
             <strong>Pisteiden kirjaus käynnissä.</strong>
           </button>
+          <button
+            v-else-if="isOpenEndedLiveTask"
+            type="button"
+            class="countdown countdown--scoring"
+            aria-label="Avaa päivätehtävä"
+            @click="$emit('navigate', 'tehtava')"
+          >
+            <strong>Päivätehtävä käynnissä.</strong>
+          </button>
           <CountdownTimer
             v-else
             :target-at="targetAt"
@@ -40,7 +49,7 @@
             </span>
             <span>
               <small>Aika</small>
-              <strong>{{ formatTime(task.startsAt) }} - {{ formatTime(task.endsAt) }}</strong>
+              <strong>{{ taskTimeLabel }}</strong>
             </span>
           </span>
         </div>
@@ -138,9 +147,15 @@ const mice: MouseAsset[] = [
   }
 ]
 
-const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt)
+const hasEndTime = computed(() => Boolean(props.task.endsAt))
+const isOpenEndedLiveTask = computed(() => props.status === 'live' && !hasEndTime.value)
+const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt ?? props.task.startsAt)
 const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa.' : 'Päivätehtävä käynnissä.')
 const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt.' : 'Päivätehtävä päättyi.')
+const taskTimeLabel = computed(() => props.task.endsAt
+  ? `${formatTime(props.task.startsAt)} - ${formatTime(props.task.endsAt)}`
+  : `${formatTime(props.task.startsAt)} alkaen`
+)
 const dailyTaskSummary = computed(() => {
   if (props.scoringInProgress) {
     return 'Tuomaristo laskee, hengitä hetki.'

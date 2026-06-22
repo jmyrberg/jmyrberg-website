@@ -19,9 +19,9 @@
         </div>
         <div>
           <small>Aika</small>
-          <strong>{{ formatTime(task.startsAt) }} - {{ formatTime(task.endsAt) }}</strong>
+          <strong>{{ taskTimeLabel }}</strong>
         </div>
-        <div v-if="status !== 'ended'" class="task-panel__time-left">
+        <div v-if="shouldShowCountdown" class="task-panel__time-left">
           <small>{{ timeLeftLabel }}</small>
           <CountdownTimer
             class="task-panel__countdown"
@@ -35,7 +35,7 @@
       </div>
     </section>
 
-    <section v-if="status !== 'live'" class="task-panel__section" aria-label="Valmistautuminen">
+    <section class="task-panel__section" aria-label="Valmistautuminen">
       <div class="task-panel__prep">
         <strong class="task-panel__box-title">Valmistautuminen</strong>
         <span>{{ task.preparationText }}</span>
@@ -114,10 +114,16 @@ const sortedDailyTips = computed(() => {
 })
 
 const hasPublishedTask = computed(() => props.hasTask)
-const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt)
+const hasEndTime = computed(() => Boolean(props.task.endsAt))
+const shouldShowCountdown = computed(() => props.status === 'upcoming' || (props.status === 'live' && hasEndTime.value))
+const targetAt = computed(() => props.status === 'upcoming' ? props.task.startsAt : props.task.endsAt ?? props.task.startsAt)
 const countdownLabel = computed(() => props.status === 'upcoming' ? 'Päivätehtävä alkaa.' : 'Päivätehtävä käynnissä.')
 const finishedLabel = computed(() => props.status === 'upcoming' ? 'Tehtävä alkaa nyt.' : 'Päivätehtävä päättyi.')
 const timeLeftLabel = computed(() => props.status === 'upcoming' ? 'Seuraavan tehtävän alkuun' : 'Aikaa jäljellä')
+const taskTimeLabel = computed(() => props.task.endsAt
+  ? `${formatTime(props.task.startsAt)} - ${formatTime(props.task.endsAt)}`
+  : `${formatTime(props.task.startsAt)} alkaen`
+)
 const taskMetaHeading = computed(() => {
   if (props.status === 'upcoming') {
     return 'Seuraava tehtävä'

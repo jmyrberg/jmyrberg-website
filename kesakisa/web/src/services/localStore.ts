@@ -67,11 +67,16 @@ function normalizeDailyTask (value: unknown, fallback: DailyTask): DailyTask {
     Number.isFinite(new Date(candidate.announcementStartsAt).getTime())
     ? candidate.announcementStartsAt
     : defaultTaskAnnouncementStartsAt(candidate.startsAt ?? fallback.startsAt)
+  const endsAt = typeof candidate.endsAt === 'string' &&
+    Number.isFinite(new Date(candidate.endsAt).getTime())
+    ? candidate.endsAt
+    : undefined
 
   return {
     ...fallback,
     ...candidate,
     announcementStartsAt,
+    endsAt,
     guidanceVisible: typeof candidate.guidanceVisible === 'boolean' ? candidate.guidanceVisible : false
   }
 }

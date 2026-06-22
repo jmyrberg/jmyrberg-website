@@ -62,8 +62,8 @@
           <input v-model="dailyTaskStartDraft" type="datetime-local" required />
         </label>
         <label>
-          Lopetusaika
-          <input v-model="dailyTaskEndDraft" type="datetime-local" required />
+          Lopetusaika (valinnainen)
+          <input v-model="dailyTaskEndDraft" type="datetime-local" />
         </label>
         <label>
           Ennen aloitusta näkyvä ohje
@@ -98,7 +98,7 @@
         </div>
         <div class="task-summary">
           <strong>{{ editableDailyTask.title }}</strong>
-          <span>{{ editableDailyTask.location }} · {{ formatDate(editableDailyTask.startsAt) }} - {{ formatClock(editableDailyTask.endsAt) }} · Pelaajille {{ formatDate(editableDailyTask.announcementStartsAt) }} alkaen</span>
+          <span>{{ editableDailyTask.location }} · {{ taskTimeSummary(editableDailyTask) }} · Pelaajille {{ formatDate(editableDailyTask.announcementStartsAt) }} alkaen</span>
           <button
             v-if="canShowDailyTaskToPlayersNow"
             type="button"
@@ -161,8 +161,8 @@
               <input v-model="dailyTaskStartDraft" type="datetime-local" required />
             </label>
             <label>
-              Lopetusaika
-              <input v-model="dailyTaskEndDraft" type="datetime-local" required />
+              Lopetusaika (valinnainen)
+              <input v-model="dailyTaskEndDraft" type="datetime-local" />
             </label>
             <label>
               Ennen aloitusta näkyvä ohje
@@ -1111,6 +1111,12 @@ function announcementVisibilitySummary (task: DailyTask, status: TaskStatus, isP
   return 'tehtävä näkyy osallistujille'
 }
 
+function taskTimeSummary (task: DailyTask): string {
+  return task.endsAt
+    ? `${formatDate(task.startsAt)} - ${formatClock(task.endsAt)}`
+    : `${formatDate(task.startsAt)} alkaen`
+}
+
 function guidanceVisibilitySummary (task: DailyTask, status: TaskStatus, isPublished: boolean): string {
   if (!isPublished) {
     return 'ohjeet eivät näy osallistujille, koska tehtävää ei ole valittu näkyviin'
@@ -1136,15 +1142,15 @@ function validateDailyTaskDraft (): string | null {
     return 'Päivätehtävän paikka puuttuu.'
   }
 
-  if (!dailyTaskStartDraft.value || !dailyTaskAnnouncementDraft.value || !dailyTaskEndDraft.value) {
-    return 'Päivätehtävän näyttö-, aloitus- ja lopetusaika puuttuvat.'
+  if (!dailyTaskStartDraft.value || !dailyTaskAnnouncementDraft.value) {
+    return 'Päivätehtävän näyttö- ja aloitusaika puuttuvat.'
   }
 
   if (new Date(dailyTaskAnnouncementDraft.value).getTime() > new Date(dailyTaskStartDraft.value).getTime()) {
     return 'Näyttöajan pitää olla viimeistään aloitushetkellä.'
   }
 
-  if (new Date(dailyTaskStartDraft.value).getTime() >= new Date(dailyTaskEndDraft.value).getTime()) {
+  if (dailyTaskEndDraft.value && new Date(dailyTaskStartDraft.value).getTime() >= new Date(dailyTaskEndDraft.value).getTime()) {
     return 'Lopetusajan pitää olla aloitusajan jälkeen.'
   }
 
@@ -1164,7 +1170,7 @@ function dailyTaskFromDraft (): DailyTask {
     instructions: dailyTaskDraft.instructions,
     announcementStartsAt: fromDateTimeLocalValue(dailyTaskAnnouncementDraft.value),
     startsAt: fromDateTimeLocalValue(dailyTaskStartDraft.value),
-    endsAt: fromDateTimeLocalValue(dailyTaskEndDraft.value)
+    endsAt: dailyTaskEndDraft.value ? fromDateTimeLocalValue(dailyTaskEndDraft.value) : undefined
   }
 }
 
@@ -1205,7 +1211,7 @@ function syncDailyTaskDraft (task: DailyTask): void {
   dailyTaskDraft.instructions = task.instructions
   dailyTaskAnnouncementDraft.value = toDateTimeLocalValue(task.announcementStartsAt)
   dailyTaskStartDraft.value = toDateTimeLocalValue(task.startsAt)
-  dailyTaskEndDraft.value = toDateTimeLocalValue(task.endsAt)
+  dailyTaskEndDraft.value = task.endsAt ? toDateTimeLocalValue(task.endsAt) : ''
   lastSuggestedDailyTaskAnnouncement = defaultAnnouncementDraftValue(dailyTaskStartDraft.value)
   isDailyTaskDraftDirty.value = false
   window.setTimeout(() => {
@@ -1809,10 +1815,14 @@ function endTaskNow (): void {
 
 function taskStatusFor (task: DailyTask): TaskStatus {
   const startsAt = new Date(task.startsAt).getTime()
-  const endsAt = new Date(task.endsAt).getTime()
+  const endsAt = task.endsAt ? new Date(task.endsAt).getTime() : Number.NaN
 
   if (now.value < startsAt) {
     return 'upcoming'
+  }
+
+  if (!Number.isFinite(endsAt)) {
+    return 'live'
   }
 
   if (now.value <= endsAt) {
