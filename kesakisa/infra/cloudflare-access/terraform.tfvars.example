@@ -1,0 +1,9 @@
+admin_emails = [
+  "admin@example.com"
+]
+
+player_emails = [
+  "player@example.com"
+]
+
+session_duration = "168h"
