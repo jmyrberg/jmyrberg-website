@@ -28,6 +28,12 @@ DEFAULT_INVITES = [
 ]
 GENERATED_CODE_HASH_LENGTH = 8
 EDGE_SECRET_HEADER = "X-Kesakisa-Edge-Secret"
+PLACEHOLDER_CODE_SALTS = {
+    "replace-with-a-random-code-salt-at-least-16-characters",
+}
+PLACEHOLDER_SESSION_SECRETS = {
+    "replace-with-a-random-secret-at-least-32-characters",
+}
 
 
 def kesakisa_api(request: Request) -> Response:
@@ -364,6 +370,9 @@ def _code_salt() -> str:
     if len(salt) < 16:
         raise AuthConfigurationError("KESAKISA_CODE_SALT must be at least 16 characters")
 
+    if salt in PLACEHOLDER_CODE_SALTS:
+        raise AuthConfigurationError("KESAKISA_CODE_SALT must be replaced with a random value")
+
     return salt
 
 
@@ -398,6 +407,9 @@ def _session_secret() -> str:
 
     if len(secret) < 32:
         raise AuthConfigurationError("KESAKISA_SESSION_SECRET must be at least 32 characters")
+
+    if secret in PLACEHOLDER_SESSION_SECRETS:
+        raise AuthConfigurationError("KESAKISA_SESSION_SECRET must be replaced with a random value")
 
     return secret
 

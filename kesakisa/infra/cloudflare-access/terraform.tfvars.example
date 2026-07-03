@@ -1,12 +1,9 @@
 admin_emails = [
-  "jesse.myrberg@gmail.com",
-  "jenni.meuronen@gmail.com"
+  "admin@example.com"
 ]
 
 player_emails = [
-  # "player@example.com"
-  "jesse.myrberg@gmail.com",
-  "jenni.meuronen@gmail.com"
+  "player@example.com"
 ]
 
 session_duration = "168h"
