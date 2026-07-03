@@ -50,6 +50,12 @@ The website and this repository contains several demo projects, which are briefl
 
 * Utilizes [vue-konva](https://github.com/konvajs/vue-konva) for creating the network, and [Google OR-Tools](https://developers.google.com/optimization) for solving the optimization problem
 
+### Kesakisa 2026
+
+* Private summer competition app for players and hosts, including code-based login, team scores, daily tasks, direct messages, rules, and mouse-hunt tracking
+
+* Uses a Vue + Vite static frontend and a small Cloud Functions API for signed sessions and shared game state
+
 
 ## Repository structure
 
@@ -57,6 +63,7 @@ The website and this repository contains several demo projects, which are briefl
 .
 ├── .vscode/tasks.json: Development & deployment commands
 ├── functions/: Backend functions
+├── kesakisa/: Kesakisa 2026 app, API, assets, and deployment notes
 ├── scripts/: Helper scripts
 ├── ui/: UI components
 </pre>
@@ -75,6 +82,14 @@ The website and this repository contains several demo projects, which are briefl
 * Install - Run `npm install` under [ui](./ui)
 
 * Development & Deployment - See [.vscode/tasks.json](.vscode/tasks.json) / [ui/package.json](ui/package.json) and adjust them for your setup
+
+### Kesakisa
+
+* API local setup - Copy [kesakisa/api/.env.example](kesakisa/api/.env.example) to `kesakisa/api/.env.local`, fill in random local values for `KESAKISA_CODE_SALT` and `KESAKISA_SESSION_SECRET`, install [kesakisa/api/requirements.txt](kesakisa/api/requirements.txt), and run the Functions Framework target `kesakisa_api`
+
+* Web local setup - Run `npm install` under [kesakisa/web](kesakisa/web), then `npm run dev -- --port 5174`
+
+* Deployment and release notes - See [kesakisa/RELEASE.md](kesakisa/RELEASE.md)
 
 ---
 
